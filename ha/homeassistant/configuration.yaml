@@ -12,6 +12,13 @@
 # Standard HA defaults (frontend, history, discovery, energy, etc.)
 default_config:
 
+# Listen on all IPv4 interfaces (HA's default, made explicit here). The
+# container uses host networking, so this binds the host's 0.0.0.0:8123;
+# LAN access is already allowed by the firewall (port 8123 in configuration.nix).
+http:
+  server_host: 0.0.0.0
+  server_port: 8123
+
 # UI-managed lists. Kept out of git so the editors in the HA UI keep working.
 automation: !include automations.yaml
 script: !include scripts.yaml
