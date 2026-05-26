@@ -162,6 +162,15 @@ in
     XCURSOR_SIZE = "32";
   };
 
+  # `nixos-rebuild switch` hangs forever in its post-activation step trying to
+  # restart funcke's user session bus (dbus-broker.service) — that bus is held
+  # open by the live Cage kiosk, so the restart never returns. Tell switch to
+  # leave the user dbus-broker alone; its config applies on next login/reboot.
+  systemd.user.services.dbus-broker = {
+    restartIfChanged = false;
+    reloadIfChanged = lib.mkForce false;
+  };
+
   # Bundle the current flake into the ISO and provide an install script
   environment.systemPackages = with pkgs; [
     chromium
