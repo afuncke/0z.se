@@ -23,16 +23,34 @@
   # ---------------------------------------------------------
   # Home Assistant
   # ---------------------------------------------------------
-  services.home-assistant = {
-    enable = true;
-    extraComponents = [
-      # Add integrations you rely on here (e.g., "esphome", "met", "radio_browser")
-      "default_config"
+  # Home Assistant runs as the official OCI container (installation type
+  # "Container" — the supported, always-latest method) via Podman.
+  #
+  # Config split:
+  #   - Writable, persistent /config  -> /var/lib/home-assistant on the data
+  #     partition. Holds HA-generated state: .storage/, the SQLite DB, logs,
+  #     secrets.yaml, and UI-managed files (automations.yaml, scripts.yaml,
+  #     scenes.yaml). NOT tracked in git.
+  #   - Hand-authored configuration.yaml -> bind-mounted read-only from this
+  #     repo (./homeassistant/configuration.yaml). Tracked in git; changes
+  #     apply via push -> nixos-rebuild. It !includes the writable UI files,
+  #     which resolve relative to /config on the machine.
+  virtualisation.podman.enable = true;
+  virtualisation.oci-containers.backend = "podman";
+  virtualisation.oci-containers.containers.homeassistant = {
+    # Pinned to a specific release for reproducible deploys. Bump deliberately:
+    # check https://github.com/home-assistant/core/releases, update the tag,
+    # then push + nixos-rebuild.
+    image = "ghcr.io/home-assistant/home-assistant:2026.5.4";
+    # Host networking is needed for device discovery (mDNS/SSDP) and many
+    # integrations; it also makes HA listen on host :8123 for the kiosk.
+    extraOptions = [ "--network=host" "--privileged" ];
+    volumes = [
+      "/var/lib/home-assistant:/config"
+      "${./homeassistant/configuration.yaml}:/config/configuration.yaml:ro"
+      "/run/dbus:/run/dbus:ro"
     ];
-    config = {
-      # This provides the standard default Home Assistant web UI and setup
-      default_config = {};
-    };
+    environment.TZ = "Europe/Stockholm";
   };
 
   # Open the firewall for Home Assistant so you can access it from other machines

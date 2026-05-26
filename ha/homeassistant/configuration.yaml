@@ -1,0 +1,23 @@
+# Home Assistant configuration — tracked in git.
+#
+# This file is bind-mounted READ-ONLY into the container at
+# /config/configuration.yaml (see ../configuration.nix). Edit it here, commit,
+# push, then `nixos-rebuild switch` on the machine to apply — it cannot be
+# edited from the HA UI.
+#
+# The !include targets below are NOT tracked: HA writes them via the UI and
+# they live in the writable /config volume (/var/lib/home-assistant) on the
+# machine. Same for secrets.yaml and .storage/.
+
+# Standard HA defaults (frontend, history, discovery, energy, etc.)
+default_config:
+
+# UI-managed lists. Kept out of git so the editors in the HA UI keep working.
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+# To pull more config into git, add the file under ha/homeassistant/ and mount
+# it read-only in configuration.nix, e.g.:
+#   "${./homeassistant/http.yaml}:/config/http.yaml:ro"
+# then reference it here with `!include http.yaml`.
