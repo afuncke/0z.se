@@ -1,5 +1,17 @@
 {
   "nodes": {
+    "afuncke-keys": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-FwBaoB6uWw6kvg2KEowj2xR4EYttMzaF+N6F1CMIFPk=",
+        "type": "file",
+        "url": "https://github.com/afuncke.keys"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://github.com/afuncke.keys"
+      }
+    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -38,6 +50,7 @@
     },
     "root": {
       "inputs": {
+        "afuncke-keys": "afuncke-keys",
         "disko": "disko",
         "nixpkgs": "nixpkgs"
       }

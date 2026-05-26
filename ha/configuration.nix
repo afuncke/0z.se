@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, afuncke-keys, ... }:
 
 {
   # ---------------------------------------------------------
@@ -47,7 +47,25 @@
     extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
     # You can define a password hash here or set it manually later.
     # For initial setup, an empty password or initialPassword might be useful:
-    initialPassword = ""; 
+    initialPassword = "";
+    # Authorized keys are pulled from this user's GitHub account
+    # (https://github.com/afuncke.keys), wired in as a flake input so the key
+    # set is pinned in flake.lock. Refresh with: nix flake update afuncke-keys
+    openssh.authorizedKeys.keyFiles = [ "${afuncke-keys}" ];
+  };
+
+  # ---------------------------------------------------------
+  # SSH (remote management & deploys)
+  # ---------------------------------------------------------
+  services.openssh = {
+    enable = true;
+    settings = {
+      # Key-based auth only. The kiosk user has an empty password, so password
+      # and empty-password logins must stay disabled.
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+    };
   };
 
   # ---------------------------------------------------------
@@ -78,28 +96,7 @@
     git
     neovim
     curl
-    (pkgs.writeScriptBin "install-ha" ''
-      #!/usr/bin/env bash
-      set -e
-
-      echo "Starting Home Assistant Thin Client Installation..."
-      
-      # 1. Run Disko (Partition & Format)
-      echo "Partitioning and formatting disks..."
-      # We use the disk-config.nix bundled in the ISO
-      sudo nix run github:nix-community/disko -- --mode disko /etc/nixos-config/disk-config.nix
-
-      # 2. Install NixOS
-      echo "Installing NixOS..."
-      # We point to the flake bundled in the ISO
-      sudo nixos-install --flake /etc/nixos-config#ha-thinclient
-
-      echo "Installation complete! You can now reboot."
-    '')
   ];
-
-  # This copies the project directory into the ISO's /etc/nixos-config
-  environment.etc."nixos-config".source = ./.;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -107,5 +104,8 @@
   # Enable Flakes and the new 'nix' command
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
-  # This value determines the NixOS release...
+  # This value determines the NixOS release with which the system's persistent
+  # state (databases, etc.) is compatible. Set it to the release you first
+  # installed from and DO NOT change it on later upgrades.
+  system.stateVersion = "26.05";
 }
