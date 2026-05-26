@@ -17,6 +17,15 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
+# Publish every state change to the MQTT broker (NATS, on 127.0.0.1:1883).
+# Requires the MQTT integration to be connected to that broker first (one-time
+# UI step: Settings > Devices & Services > Add Integration > MQTT, host
+# 127.0.0.1, port 1883). Topics are published under <base_topic>/...
+mqtt_statestream:
+  base_topic: homeassistant
+  publish_attributes: false
+  publish_timestamps: true
+
 # To pull more config into git, add the file under ha/homeassistant/ and mount
 # it read-only in configuration.nix, e.g.:
 #   "${./homeassistant/http.yaml}:/config/http.yaml:ro"

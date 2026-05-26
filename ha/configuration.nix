@@ -1,5 +1,25 @@
 { config, pkgs, lib, afuncke-keys, ... }:
 
+let
+  # A cursor theme whose cursors are a single fully-transparent pixel. Pointing
+  # the Wayland compositor (Cage) at this hides the mouse pointer entirely,
+  # which is what we want on a touchscreen kiosk.
+  blankCursorTheme = pkgs.runCommand "blank-cursor-theme"
+    { nativeBuildInputs = [ pkgs.imagemagick pkgs.xorg.xcursorgen ]; }
+    ''
+      dir=$out/share/icons/blank/cursors
+      mkdir -p "$dir"
+      magick -size 32x32 xc:transparent transparent.png
+      echo "32 0 0 transparent.png" > cursor.cfg
+      xcursorgen cursor.cfg "$dir/left_ptr"
+      # Alias the cursor names apps/toolkits commonly request to the blank one.
+      for name in default arrow top_left_arrow pointer hand1 hand2 xterm text \
+                  watch left_ptr_watch progress; do
+        ln -sf left_ptr "$dir/$name"
+      done
+      printf '[Icon Theme]\nName=blank\n' > "$out/share/icons/blank/index.theme"
+    '';
+in
 {
   # ---------------------------------------------------------
   # System Identity & Networking
@@ -53,8 +73,34 @@
     environment.TZ = "Europe/Stockholm";
   };
 
+  # Robustness for the HA container service: start only after the data
+  # partition is mounted, and fail loudly if it isn't — never silently write
+  # HA's DB into the bare mountpoint on the eMMC root and have the partition
+  # shadow it later. (oci-containers already sets TimeoutStartSec=0, so a slow
+  # first image pull won't time out.)
+  systemd.services.podman-homeassistant.unitConfig.RequiresMountsFor =
+    "/var/lib/home-assistant";
+
   # Open the firewall for Home Assistant so you can access it from other machines
   networking.firewall.allowedTCPPorts = [ 8123 ];
+
+  # ---------------------------------------------------------
+  # NATS (MQTT broker for Home Assistant)
+  # ---------------------------------------------------------
+  # NATS' built-in MQTT support lets it act as the broker HA publishes to.
+  # MQTT requires JetStream (it persists MQTT sessions there), so jetstream
+  # must be enabled. The MQTT listener is bound to localhost only: the
+  # host-networked HA container reaches it at 127.0.0.1:1883, and we don't
+  # want the broker exposed on the LAN. The NATS client port (4222) likewise
+  # stays closed in the firewall; open it only if remote NATS clients need it.
+  services.nats = {
+    enable = true;
+    jetstream = true;
+    serverName = "ha-nats";
+    settings = {
+      mqtt.listen = "127.0.0.1:1883";
+    };
+  };
 
   # ---------------------------------------------------------
   # Users
@@ -106,6 +152,14 @@
     user = "funcke";
     # Launch Chromium in incognito/kiosk mode pointing to the local Home Assistant
     program = "${pkgs.chromium}/bin/chromium --kiosk --start-fullscreen --no-first-run --disable-infobars --noerrdialogs http://localhost:8123";
+  };
+
+  # Hide the mouse pointer on the touchscreen by giving Cage a transparent
+  # cursor theme. (The X11 `unclutter` trick does not work under Wayland.)
+  systemd.services.cage-tty1.environment = {
+    XCURSOR_THEME = "blank";
+    XCURSOR_PATH = "${blankCursorTheme}/share/icons";
+    XCURSOR_SIZE = "32";
   };
 
   # Bundle the current flake into the ISO and provide an install script
