@@ -1,0 +1,38 @@
+# Bento: sink everything published to the local NATS broker into DuckDB.
+#
+# Runs as a host-networked OCI container, so the NATS client port is reachable
+# at 127.0.0.1:4222. Messages that arrive over NATS' MQTT listener (Home
+# Assistant, Frigate) are republished on NATS subjects with '/' translated to
+# '.', e.g. MQTT topic `frigate/events` -> subject `frigate.events`.
+#
+# `subject: ">"` captures every subject — the broadest "sink it all" default.
+# Narrow it (e.g. `frigate.>`) if you only want a subset and want to skip
+# NATS/MQTT internal traffic.
+input:
+  nats:
+    urls:
+      - nats://127.0.0.1:4222
+    subject: ">"
+    queue: bento-duckdb
+
+# Each NATS message becomes one row: the originating subject, the raw payload,
+# and an ingest timestamp (filled by DuckDB's column DEFAULT). The DuckDB file
+# lives on the data partition (mounted at /data); only Bento writes to it, so
+# DuckDB's single-writer constraint is satisfied. Inserts are batched to avoid
+# a commit per message.
+output:
+  sql_insert:
+    driver: duckdb
+    dsn: /data/nats.duckdb
+    table: nats_messages
+    columns: [ subject, payload ]
+    args_mapping: 'root = [ meta("nats_subject"), content().string() ]'
+    init_statement: |
+      CREATE TABLE IF NOT EXISTS nats_messages (
+        ts      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        subject VARCHAR,
+        payload VARCHAR
+      );
+    batching:
+      count: 100
+      period: 5s
