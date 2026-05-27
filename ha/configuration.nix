@@ -81,8 +81,51 @@ in
   systemd.services.podman-homeassistant.unitConfig.RequiresMountsFor =
     "/var/lib/home-assistant";
 
-  # Open the firewall for Home Assistant so you can access it from other machines
-  networking.firewall.allowedTCPPorts = [ 8123 ];
+  # Open the firewall: 8123 = Home Assistant, 8971 = Frigate (authenticated UI).
+  # Frigate's internal API (5000) and go2rtc (8554/8555) stay closed; open the
+  # latter only if you want WebRTC/RTSP live view from other machines.
+  networking.firewall.allowedTCPPorts = [ 8123 8971 ];
+
+  # ---------------------------------------------------------
+  # Frigate NVR (OCI container, Intel iGPU / OpenVINO detection)
+  # ---------------------------------------------------------
+  # Same pattern as HA: pinned image; writable /config (frigate.db, model
+  # cache, logs) and recordings live on the data partition (the only place
+  # with real space); config.yml is bind-mounted read-only from git. Object
+  # detection runs on the Intel iGPU via OpenVINO; the iGPU also does VAAPI
+  # decode. Frigate publishes events to the local NATS MQTT broker.
+  virtualisation.oci-containers.containers.frigate = {
+    image = "ghcr.io/blakeblackshear/frigate:0.17.2";
+    extraOptions = [
+      "--network=host"               # go2rtc/WebRTC + camera discovery; UI on :8971/:5000
+      "--device=/dev/dri/renderD128" # Intel iGPU: OpenVINO detection + VAAPI decode
+      "--shm-size=256m"              # raise as you add cameras (Frigate logs the size it needs)
+      "--tmpfs=/tmp/cache:size=1g"   # Frigate clip cache
+    ];
+    volumes = [
+      "/var/lib/home-assistant/frigate/config:/config"
+      "/var/lib/home-assistant/frigate/media:/media/frigate"
+      "${./frigate/config.yml}:/config/config.yml:ro"
+      "/etc/localtime:/etc/localtime:ro"
+    ];
+    # RTSP credentials are substituted into config.yml as {FRIGATE_RTSP_PASSWORD}.
+    # Put the real value in this env file on the box (created empty below) — it
+    # is NOT in git. e.g.  echo 'FRIGATE_RTSP_PASSWORD=...' > the file.
+    environmentFiles = [ "/var/lib/home-assistant/frigate/frigate.env" ];
+  };
+
+  # Create Frigate's directories + an empty secrets file on the data partition
+  # so the first deploy doesn't fail before you've populated them.
+  systemd.tmpfiles.rules = [
+    "d /var/lib/home-assistant/frigate        0750 root root -"
+    "d /var/lib/home-assistant/frigate/config 0750 root root -"
+    "d /var/lib/home-assistant/frigate/media  0750 root root -"
+    "f /var/lib/home-assistant/frigate/frigate.env 0600 root root -"
+  ];
+
+  # Don't start Frigate before its data partition is mounted (see HA above).
+  systemd.services.podman-frigate.unitConfig.RequiresMountsFor =
+    "/var/lib/home-assistant";
 
   # ---------------------------------------------------------
   # NATS (MQTT broker for Home Assistant)

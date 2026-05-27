@@ -1,0 +1,75 @@
+# Frigate configuration — tracked in git.
+#
+# Bind-mounted READ-ONLY into the container at /config/config.yml (see
+# ../configuration.nix). Edit here, commit, push, then redeploy + restart the
+# frigate container. Frigate's DB/model-cache and recordings live in the
+# writable volumes (/var/lib/home-assistant/frigate/{config,media}), not git.
+#
+# Secrets: RTSP passwords use {FRIGATE_RTSP_PASSWORD}, supplied from
+# /var/lib/home-assistant/frigate/frigate.env on the box (never committed).
+
+mqtt:
+  enabled: true
+  host: 127.0.0.1          # the local NATS MQTT broker (services.nats)
+  port: 1883
+
+# Object detection on the Intel iGPU via OpenVINO (needs /dev/dri).
+detectors:
+  ov:
+    type: openvino
+    device: GPU
+
+# Bundled OpenVINO SSDLite MobileNet v2 model (ships in the Frigate image).
+model:
+  width: 300
+  height: 300
+  input_tensor: nhwc
+  input_pixel_format: bgr
+  path: /openvino-model/ssdlite_mobilenet_v2.xml
+  labelmap_path: /openvino-model/coco_91cl_bkgr.txt
+
+# Intel iGPU hardware-accelerated video decode.
+ffmpeg:
+  hwaccel_args: preset-vaapi
+
+record:
+  enabled: true
+  retain:
+    days: 3
+    mode: all          # continuous retention for 3 days
+  alerts:
+    retain:
+      days: 30
+  detections:
+    retain:
+      days: 30
+
+snapshots:
+  enabled: true
+  retain:
+    default: 14
+
+# ---------------------------------------------------------------------------
+# Cameras — REPLACE the example below with your real camera(s).
+# Use a low-res substream for `detect` and the high-res stream for `record`.
+# Put the RTSP password in frigate.env as FRIGATE_RTSP_PASSWORD=...
+# ---------------------------------------------------------------------------
+cameras:
+  camera_1:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.10:554/Streaming/Channels/102
+          roles:
+            - detect
+        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.10:554/Streaming/Channels/101
+          roles:
+            - record
+    detect:
+      enabled: true
+      width: 1280
+      height: 720
+      fps: 5
+    objects:
+      track:
+        - person
