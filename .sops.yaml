@@ -7,8 +7,8 @@
 #       ssh funcke@ha 'cat /etc/ssh/ssh_host_ed25519_key.pub' | nix run nixpkgs#ssh-to-age
 #
 keys:
-  - &admin age1REPLACE_WITH_YOUR_ADMIN_AGE_PUBKEY
-  - &host_ha age1REPLACE_WITH_HOST_AGE_PUBKEY
+  - &admin age1fqgyjsn6qhg2emysswngaa56cvqu0225llnjn7fq357jxrjyu5yq99pt9a
+  - &host_ha age12ueagwp7340r7epyrtacr4lak7q50dfz88wfl5ej8lv457hsm52sa4thnw
 creation_rules:
   - path_regex: ha/secrets/[^/]+\.yaml$
     key_groups:
