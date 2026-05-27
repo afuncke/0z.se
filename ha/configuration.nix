@@ -120,6 +120,8 @@ in
     "d /var/lib/home-assistant/frigate        0750 root root -"
     "d /var/lib/home-assistant/frigate/config 0750 root root -"
     "d /var/lib/home-assistant/frigate/media  0750 root root -"
+    # DuckDB sink written by the Bento container (see below).
+    "d /var/lib/home-assistant/bento          0750 root root -"
   ];
 
   # Don't start Frigate before its data partition is mounted (see HA above).
@@ -163,6 +165,37 @@ in
     settings = {
       mqtt.listen = "127.0.0.1:1883";
     };
+  };
+
+  # ---------------------------------------------------------
+  # Bento (NATS -> DuckDB sink)
+  # ---------------------------------------------------------
+  # Bento (the warpstreamlabs stream processor) subscribes to the local NATS
+  # broker and persists every message into a DuckDB file for later analysis.
+  # Same pattern as HA/Frigate: pinned OCI image, host networking, config
+  # bind-mounted read-only from git, durable state on the data partition.
+  #
+  # The image MUST be the CGO-enabled `-cgo` variant: DuckDB links a static C
+  # library and is only compiled into builds with CGO (the plain image lacks
+  # the duckdb SQL driver). Host networking lets Bento reach NATS on
+  # 127.0.0.1:4222 (loopback, so no firewall change needed). The DuckDB file is
+  # written to /data -> /var/lib/home-assistant/bento on the data partition.
+  virtualisation.oci-containers.containers.bento = {
+    image = "ghcr.io/warpstreamlabs/bento:1.18.0-cgo";
+    cmd = [ "-c" "/bento.yaml" ];
+    extraOptions = [ "--network=host" ];
+    volumes = [
+      "${./bento/config.yaml}:/bento.yaml:ro"
+      "/var/lib/home-assistant/bento:/data"
+    ];
+    environment.TZ = "Europe/Stockholm";
+  };
+
+  # Don't start Bento before its data partition is mounted, and not before NATS
+  # is up (Bento retries, but this avoids noisy startup failures).
+  systemd.services.podman-bento = {
+    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    after = [ "nats.service" ];
   };
 
   # ---------------------------------------------------------
