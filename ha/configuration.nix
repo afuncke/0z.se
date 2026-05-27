@@ -108,24 +108,44 @@ in
       "${./frigate/config.yml}:/config/config.yml:ro"
       "/etc/localtime:/etc/localtime:ro"
     ];
-    # RTSP credentials are substituted into config.yml as {FRIGATE_RTSP_PASSWORD}.
-    # Put the real value in this env file on the box (created empty below) — it
-    # is NOT in git. e.g.  echo 'FRIGATE_RTSP_PASSWORD=...' > the file.
-    environmentFiles = [ "/var/lib/home-assistant/frigate/frigate.env" ];
+    # RTSP creds (FRIGATE_RTSP_USER/PASSWORD, substituted into config.yml) come
+    # from a sops-rendered env file — encrypted in git, decrypted on the host.
+    # See the sops block below.
+    environmentFiles = [ config.sops.templates."frigate.env".path ];
   };
 
-  # Create Frigate's directories + an empty secrets file on the data partition
-  # so the first deploy doesn't fail before you've populated them.
+  # Create Frigate's config/media directories on the data partition so the
+  # first deploy doesn't fail before they exist.
   systemd.tmpfiles.rules = [
     "d /var/lib/home-assistant/frigate        0750 root root -"
     "d /var/lib/home-assistant/frigate/config 0750 root root -"
     "d /var/lib/home-assistant/frigate/media  0750 root root -"
-    "f /var/lib/home-assistant/frigate/frigate.env 0600 root root -"
   ];
 
   # Don't start Frigate before its data partition is mounted (see HA above).
   systemd.services.podman-frigate.unitConfig.RequiresMountsFor =
     "/var/lib/home-assistant";
+
+  # ---------------------------------------------------------
+  # Secrets (sops-nix)
+  # ---------------------------------------------------------
+  # Secrets are committed encrypted in ./secrets/*.yaml and decrypted on the
+  # host at activation using its SSH host key (no separate key to manage).
+  # Edit with:  sops secrets/frigate.yaml   (recipients set in ./.sops.yaml)
+  sops = {
+    defaultSopsFile = ./secrets/frigate.yaml;
+    age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+    # Re-enable once the real encrypted secrets/frigate.yaml is committed; left
+    # off so the repo builds with the placeholder before you've encrypted it.
+    validateSopsFiles = false;
+    secrets.frigate_rtsp_user = { };
+    secrets.frigate_rtsp_password = { };
+    # Render the env file Frigate reads, interpolating the decrypted secrets.
+    templates."frigate.env".content = ''
+      FRIGATE_RTSP_USER=${config.sops.placeholder.frigate_rtsp_user}
+      FRIGATE_RTSP_PASSWORD=${config.sops.placeholder.frigate_rtsp_password}
+    '';
+  };
 
   # ---------------------------------------------------------
   # NATS (MQTT broker for Home Assistant)

@@ -1,0 +1,17 @@
+# sops recipients. Fill in the two age public keys below, then encrypt
+# ha/secrets/frigate.yaml (see ha/secrets/README.md).
+#
+#   - admin: YOUR age key (so you can edit secrets). Create with:
+#       age-keygen -o ~/.config/sops/age/keys.txt   # prints the public key
+#   - host:  the ha box, derived from its SSH host key:
+#       ssh funcke@ha 'cat /etc/ssh/ssh_host_ed25519_key.pub' | nix run nixpkgs#ssh-to-age
+#
+keys:
+  - &admin age1REPLACE_WITH_YOUR_ADMIN_AGE_PUBKEY
+  - &host_ha age1REPLACE_WITH_HOST_AGE_PUBKEY
+creation_rules:
+  - path_regex: ha/secrets/[^/]+\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *host_ha
