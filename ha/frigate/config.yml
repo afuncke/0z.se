@@ -10,7 +10,7 @@
 
 mqtt:
   enabled: true
-  host: 127.0.0.1          # the local NATS MQTT broker (services.nats)
+  host: 127.0.0.1 # the local NATS MQTT broker (services.nats)
   port: 1883
 
 # Object detection on the Intel iGPU via OpenVINO (needs /dev/dri).
@@ -36,7 +36,7 @@ record:
   enabled: true
   retain:
     days: 3
-    mode: all          # continuous retention for 3 days
+    mode: all # continuous retention for 3 days
   alerts:
     retain:
       days: 30
@@ -59,10 +59,13 @@ cameras:
     enabled: true
     ffmpeg:
       inputs:
-        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.10:554/Streaming/Channels/102
+        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.102:554/Streaming/Channels/102
           roles:
             - detect
-        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.10:554/Streaming/Channels/101
+        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.103:554/Streaming/Channels/101
+          roles:
+            - record
+        - path: rtsp://admin:{FRIGATE_RTSP_PASSWORD}@192.168.1.104:554/Streaming/Channels/101
           roles:
             - record
     detect:
