@@ -1,24 +1,33 @@
 { config, pkgs, lib, afuncke-keys, ... }:
 
 let
-  # A cursor theme whose cursors are a single fully-transparent pixel. Pointing
-  # the Wayland compositor (Cage) at this hides the mouse pointer entirely,
-  # which is what we want on a touchscreen kiosk.
-  blankCursorTheme = pkgs.runCommand "blank-cursor-theme"
-    { nativeBuildInputs = [ pkgs.imagemagick pkgs.xorg.xcursorgen ]; }
-    ''
-      dir=$out/share/icons/blank/cursors
-      mkdir -p "$dir"
-      magick -size 32x32 xc:transparent transparent.png
-      echo "32 0 0 transparent.png" > cursor.cfg
-      xcursorgen cursor.cfg "$dir/left_ptr"
-      # Alias the cursor names apps/toolkits commonly request to the blank one.
-      for name in default arrow top_left_arrow pointer hand1 hand2 xterm text \
-                  watch left_ptr_watch progress; do
-        ln -sf left_ptr "$dir/$name"
-      done
-      printf '[Icon Theme]\nName=blank\n' > "$out/share/icons/blank/index.theme"
-    '';
+  # Sway kiosk config: black background, no decorations, native cursor hiding,
+  # squeekboard for the on-screen keyboard (auto-shows on text-input focus via
+  # input-method-v2), and Chromium fullscreen on HA.
+  swayKioskConfig = pkgs.writeText "sway-kiosk.conf" ''
+    # Cursor — replaces the Cage-era transparent-cursor-theme workaround.
+    seat * hide_cursor 1000
+    seat * hide_cursor when-typing enable
+
+    # Strip every chrome a kiosk doesn't need.
+    default_border none
+    default_floating_border none
+    titlebar_padding 0
+    font pango:monospace 0
+    output * bg #000000 solid_color
+    focus_follows_mouse no
+
+    # On-screen keyboard. squeekboard appears automatically whenever a client
+    # requests input via the input-method-v2 protocol (Sway 1.10+ supports it).
+    exec squeekboard
+
+    # The kiosk itself: Chromium fullscreen on the local Home Assistant.
+    # --enable-wayland-ime is what makes text fields request input-method-v2
+    # so squeekboard pops up. Without it the OSK never shows in Chromium.
+    exec chromium --kiosk --ozone-platform=wayland --enable-wayland-ime \
+      --start-fullscreen --no-first-run --disable-infobars --noerrdialogs \
+      http://localhost:8123
+  '';
 in
 {
   # ---------------------------------------------------------
@@ -229,47 +238,46 @@ in
   };
 
   # ---------------------------------------------------------
-  # Kiosk Mode (Cage + Chromium)
+  # Kiosk Mode (Sway + Chromium + squeekboard OSK)
   # ---------------------------------------------------------
-  
-  # Enable graphics support (required for Wayland/Cage)
-  hardware.graphics.enable = true; 
+  # Replaced Cage with Sway because Cage lacks layer-shell + input-method-v2,
+  # which any on-screen keyboard needs to render and to auto-show on focus.
+  # Sway also natively hides the cursor, so the transparent-cursor-theme hack
+  # is gone.
 
-  # Crucial for the Intel Wi-Fi and Bluetooth modules to load their proprietary firmware
+  # Graphics + firmware (needed for the iGPU under Wayland + Wi-Fi/Bluetooth).
+  hardware.graphics.enable = true;
   hardware.enableRedistributableFirmware = true;
-
-  # Enable Bluetooth and its management daemon
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
 
-  # Cage is a Wayland kiosk compositor
-  services.cage = {
+  programs.sway = {
     enable = true;
-    user = "funcke";
-    # Launch Chromium in incognito/kiosk mode pointing to the local Home Assistant
-    program = "${pkgs.chromium}/bin/chromium --kiosk --start-fullscreen --no-first-run --disable-infobars --noerrdialogs http://localhost:8123";
+    wrapperFeatures.gtk = true;   # GTK apps (e.g. squeekboard) launched from the wrapper
   };
 
-  # Hide the mouse pointer on the touchscreen by giving Cage a transparent
-  # cursor theme. (The X11 `unclutter` trick does not work under Wayland.)
-  systemd.services.cage-tty1.environment = {
-    XCURSOR_THEME = "blank";
-    XCURSOR_PATH = "${blankCursorTheme}/share/icons";
-    XCURSOR_SIZE = "32";
+  # Autologin funcke straight into the Sway kiosk session — no prompt, no DM.
+  services.greetd = {
+    enable = true;
+    settings.default_session = {
+      user = "funcke";
+      command = "${pkgs.sway}/bin/sway --config ${swayKioskConfig}";
+    };
   };
 
   # `nixos-rebuild switch` hangs forever in its post-activation step trying to
   # restart funcke's user session bus (dbus-broker.service) — that bus is held
-  # open by the live Cage kiosk, so the restart never returns. Tell switch to
-  # leave the user dbus-broker alone; its config applies on next login/reboot.
+  # open by the live graphical session, so the restart never returns. Tell
+  # switch to leave the user dbus-broker alone; its config applies on next
+  # login/reboot.
   systemd.user.services.dbus-broker = {
     restartIfChanged = false;
     reloadIfChanged = lib.mkForce false;
   };
 
-  # Bundle the current flake into the ISO and provide an install script
   environment.systemPackages = with pkgs; [
     chromium
+    squeekboard      # the on-screen keyboard Sway auto-shows on text input
     git
     neovim
     curl
