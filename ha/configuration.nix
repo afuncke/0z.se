@@ -17,9 +17,12 @@ let
     output * bg #000000 solid_color
     focus_follows_mouse no
 
-    # On-screen keyboard. squeekboard appears automatically whenever a client
-    # requests input via the input-method-v2 protocol (Sway 1.10+ supports it).
-    exec squeekboard
+    # On-screen keyboard. squeekboard runs as a user systemd service (defined
+    # below) so it gets logs, restart, and proper session DBus activation —
+    # `exec squeekboard` from here was silently failing in greetd's minimal
+    # session. Once running, squeekboard auto-shows whenever a client requests
+    # input via text-input-v3 / input-method-v2.
+    exec systemctl --user start squeekboard.service
 
     # The kiosk itself: Chromium fullscreen on the local Home Assistant.
     # --enable-wayland-ime is what makes text fields request input-method-v2
@@ -273,6 +276,19 @@ in
   systemd.user.services.dbus-broker = {
     restartIfChanged = false;
     reloadIfChanged = lib.mkForce false;
+  };
+
+  # On-screen keyboard as a user service. Started explicitly by the sway
+  # kiosk config (see swayKioskConfig above) rather than via
+  # sway-session.target, which greetd's minimal session doesn't reliably
+  # reach. Restart=on-failure so a crash doesn't silently leave the kiosk
+  # without an OSK.
+  systemd.user.services.squeekboard = {
+    description = "On-screen keyboard (squeekboard)";
+    serviceConfig = {
+      ExecStart = "${pkgs.squeekboard}/bin/squeekboard";
+      Restart = "on-failure";
+    };
   };
 
   environment.systemPackages = with pkgs; [
