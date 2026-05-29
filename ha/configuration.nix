@@ -104,7 +104,7 @@ in
   # detection runs on the Intel iGPU via OpenVINO; the iGPU also does VAAPI
   # decode. Frigate publishes events to the local NATS MQTT broker.
   virtualisation.oci-containers.containers.frigate = {
-    image = "ghcr.io/blakeblackshear/frigate:0.17.2";
+    image = "ghcr.io/blakeblackshear/frigate:0.17.1";
     extraOptions = [
       "--network=host"               # go2rtc/WebRTC + camera discovery; UI on :8971/:5000
       "--device=/dev/dri/renderD128" # Intel iGPU: OpenVINO detection + VAAPI decode
