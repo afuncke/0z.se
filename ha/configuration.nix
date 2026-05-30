@@ -154,6 +154,12 @@ in
     validateSopsFiles = false;
     secrets.frigate_rtsp_user = { };
     secrets.frigate_rtsp_password = { };
+    # Bluetooth keyboard pairing record (the bluetoothd `info` file, link key
+    # and all). Consumed by systemd.services.bluetooth-keyboard-pairing above.
+    secrets.bluetooth_keyboard_info = {
+      sopsFile = ./secrets/bluetooth.yaml;
+      key = "keyboard_7c1e520c3573_info";
+    };
     # Render the env file Frigate reads, interpolating the decrypted secrets.
     templates."frigate.env".content = ''
       FRIGATE_RTSP_USER=${config.sops.placeholder.frigate_rtsp_user}
@@ -253,6 +259,35 @@ in
   hardware.enableRedistributableFirmware = true;
   hardware.bluetooth.enable = true;
   hardware.bluetooth.powerOnBoot = true;
+
+  # Declarative pairing for the kiosk's Bluetooth keyboard
+  # (7C:1E:52:0C:35:73). bluetoothd persists pairings under
+  # /var/lib/bluetooth/<adapter>/<device>/info — that file contains the link
+  # key, so it's a secret. We ship it via sops and drop it into place before
+  # bluetoothd starts, so a freshly-wiped host reconnects the keyboard with no
+  # human present. One-time capture flow is in secrets/README.md.
+  systemd.services.bluetooth-keyboard-pairing = {
+    description = "Restore declarative Bluetooth keyboard pairing";
+    wantedBy = [ "bluetooth.service" ];
+    before = [ "bluetooth.service" ];
+    after = [ "sys-subsystem-bluetooth-devices-hci0.device" ];
+    bindsTo = [ "sys-subsystem-bluetooth-devices-hci0.device" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      set -eu
+      device_mac="7C:1E:52:0C:35:73"
+      adapter_mac=$(tr '[:lower:]' '[:upper:]' < /sys/class/bluetooth/hci0/address)
+      device_dir="/var/lib/bluetooth/$adapter_mac/$device_mac"
+      install -d -m 0700 -o root -g root "/var/lib/bluetooth/$adapter_mac"
+      install -d -m 0700 -o root -g root "$device_dir"
+      install -m 0600 -o root -g root \
+        ${config.sops.secrets.bluetooth_keyboard_info.path} \
+        "$device_dir/info"
+    '';
+  };
 
   programs.sway = {
     enable = true;
