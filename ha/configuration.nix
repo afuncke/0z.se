@@ -270,22 +270,30 @@ in
     description = "Restore declarative Bluetooth keyboard pairing";
     wantedBy = [ "bluetooth.service" ];
     before = [ "bluetooth.service" ];
-    after = [ "sys-subsystem-bluetooth-devices-hci0.device" ];
-    bindsTo = [ "sys-subsystem-bluetooth-devices-hci0.device" ];
+    after = [ "sops-install-secrets.service" ];
+    requires = [ "sops-install-secrets.service" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
     };
     script = ''
       set -eu
+      # Adapter MAC is the BT controller soldered into this thinclient. If the
+      # board is ever replaced, update this and re-pair.
+      adapter_mac="F4:B3:01:1E:C4:62"
       device_mac="7C:1E:52:0C:35:73"
-      adapter_mac=$(tr '[:lower:]' '[:upper:]' < /sys/class/bluetooth/hci0/address)
       device_dir="/var/lib/bluetooth/$adapter_mac/$device_mac"
       install -d -m 0700 -o root -g root "/var/lib/bluetooth/$adapter_mac"
       install -d -m 0700 -o root -g root "$device_dir"
       install -m 0600 -o root -g root \
         ${config.sops.secrets.bluetooth_keyboard_info.path} \
         "$device_dir/info"
+      # If bluetoothd is already running (e.g. nixos-rebuild switch on a live
+      # system, not a fresh boot), Before=bluetooth.service is moot — restart
+      # it so our updated info file gets re-read.
+      if systemctl is-active --quiet bluetooth.service; then
+        systemctl restart bluetooth.service
+      fi
     '';
   };
 
