@@ -29,7 +29,7 @@ let
     # so squeekboard pops up. Without it the OSK never shows in Chromium.
     exec chromium --kiosk --ozone-platform=wayland --enable-wayland-ime \
       --start-fullscreen --no-first-run --disable-infobars --noerrdialogs \
-      http://localhost:8123
+      http://localhost:7280
   '';
 in
 {
@@ -217,6 +217,19 @@ in
   };
 
   # ---------------------------------------------------------
+  # shenas-kiosk (OCI container)
+  # ---------------------------------------------------------
+  # Image hosted on a Tailscale tailnet registry, so this host needs tailscale
+  # up and authenticated for podman to pull. Note: unlike the other containers
+  # here, this one is pinned to `:latest` — image will float; bump deliberately
+  # with `podman pull` + `systemctl restart podman-shenas-kiosk` if you want
+  # an updated version, or pin to a digest for reproducibility.
+  virtualisation.oci-containers.containers.shenas-kiosk = {
+    image = "registry.sailfish-brill.ts.net/shenas/shenas-kiosk:latest";
+    extraOptions = [ "--network=host" ];
+  };
+
+  # ---------------------------------------------------------
   # Users
   # ---------------------------------------------------------
   users.users.funcke = {
@@ -308,6 +321,18 @@ in
       user = "funcke";
       command = "${pkgs.sway}/bin/sway --config ${swayKioskConfig}";
     };
+  };
+
+  # Order greetd after shenas-kiosk so Chromium doesn't race the container and
+  # render a connection-refused error page. `Wants=` (not `Requires=`) keeps
+  # this soft: if the container fails, the kiosk still comes up (showing an
+  # error page) rather than leaving the display blank.
+  # Caveat: this only waits for podman to *start* the container, not for the
+  # HTTP server inside it to be listening on :7280. Tighten with a port-wait
+  # oneshot if first-pull/cold-start races still happen.
+  systemd.services.greetd = {
+    after = [ "podman-shenas-kiosk.service" ];
+    wants = [ "podman-shenas-kiosk.service" ];
   };
 
   # `nixos-rebuild switch` hangs forever in its post-activation step trying to
