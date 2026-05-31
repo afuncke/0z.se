@@ -270,8 +270,6 @@ in
     description = "Restore declarative Bluetooth keyboard pairing";
     wantedBy = [ "bluetooth.service" ];
     before = [ "bluetooth.service" ];
-    after = [ "sops-install-secrets.service" ];
-    requires = [ "sops-install-secrets.service" ];
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
