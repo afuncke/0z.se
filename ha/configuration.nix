@@ -286,12 +286,13 @@ in
       install -m 0600 -o root -g root \
         ${config.sops.secrets.bluetooth_keyboard_info.path} \
         "$device_dir/info"
-      # If bluetoothd is already running (e.g. nixos-rebuild switch on a live
-      # system, not a fresh boot), Before=bluetooth.service is moot — restart
-      # it so our updated info file gets re-read.
-      if systemctl is-active --quiet bluetooth.service; then
-        systemctl restart bluetooth.service
-      fi
+      # Deliberately do NOT `systemctl restart bluetooth.service` here: this
+      # unit is Before=bluetooth.service, so a restart from inside the unit
+      # deadlocks (bluetooth.service waits for us to exit, we wait for it to
+      # restart). On a fresh boot the Before= ordering is enough. On a
+      # nixos-rebuild switch where the file changes but bluetoothd isn't
+      # restarted, the new pairing applies after the next reboot — or run
+      # `sudo systemctl restart bluetooth` manually if you don't want to wait.
     '';
   };
 
