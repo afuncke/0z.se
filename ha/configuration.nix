@@ -40,6 +40,15 @@ in
   networking.domain = "0z.se";
   networking.networkmanager.enable = true;
 
+  # Tailscale: needed so this host can pull podman images from
+  # `registry.sailfish-brill.ts.net` (the shenas-kiosk image lives there) and
+  # so we can SSH in over the tailnet. NixOS just runs the daemon and opens
+  # the tailnet interface in the firewall — `tailscale up` still has to be
+  # run once interactively on the host to authenticate against the tailnet
+  # (browser flow). After that, state in /var/lib/tailscale persists across
+  # reboots.
+  services.tailscale.enable = true;
+
   # ---------------------------------------------------------
   # Bootloader (UEFI) & Kernel Modules
   # ---------------------------------------------------------
