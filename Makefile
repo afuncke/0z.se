@@ -17,9 +17,10 @@
 # NixOS and has no nixos-rebuild on PATH.
 #
 # `--ask-sudo-password` prompts here and feeds the password to `sudo --stdin`
-# on ha (no remote TTY needed). The `\#` escapes Make's comment syntax; the
-# single quotes keep the `#` intact for the shell so the flake URL parses.
+# on ha (no remote TTY needed). The flake URL's `#` is single-quoted so the
+# shell keeps it literal — no backslash escaping, since (unlike the old
+# build-on-ha target) this runs nix directly with no second remote shell.
 switch-ha:
 	nix run nixpkgs#nixos-rebuild -- switch --refresh \
-	  --flake 'github:afuncke/0z.se?dir=ha\#ha-thinclient' \
+	  --flake 'github:afuncke/0z.se?dir=ha#ha-thinclient' \
 	  --target-host ha --ask-sudo-password
