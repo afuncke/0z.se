@@ -414,6 +414,13 @@ in
   # Enable Flakes and the new 'nix' command
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
+  # Trust funcke for store operations so `make switch-ha` can build the config
+  # on the workstation and copy the (unsigned) closure here. Without this, ha's
+  # nix-daemon rejects unsigned paths pushed by a non-trusted user. We build off
+  # the host because the config now pulls a git+ssh flake input from the shenas
+  # forge, which ha's root can't authenticate to. See the repo-root Makefile.
+  nix.settings.trusted-users = [ "root" "funcke" ];
+
   # This value determines the NixOS release with which the system's persistent
   # state (databases, etc.) is compatible. Set it to the release you first
   # installed from and DO NOT change it on later upgrades.
