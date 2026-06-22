@@ -40,6 +40,13 @@ in
   networking.domain = "0z.se";
   networking.networkmanager.enable = true;
 
+  # System timezone. Also materializes /etc/localtime, which the Frigate
+  # container bind-mounts read-only (see the Frigate block below) — without a
+  # timezone set, /etc/localtime doesn't exist and podman fails to start
+  # Frigate with `statfs /etc/localtime: no such file or directory`. Matches the
+  # TZ already used for the HA and Bento containers.
+  time.timeZone = "Europe/Stockholm";
+
   # Tailscale: needed so this host can pull podman images from
   # `registry.sailfish-brill.ts.net` (the shenas-kiosk image lives there) and
   # so we can SSH in over the tailnet. NixOS just runs the daemon and opens
