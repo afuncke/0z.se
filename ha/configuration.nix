@@ -174,6 +174,13 @@ in
       FRIGATE_RTSP_USER=${config.sops.placeholder.frigate_rtsp_user}
       FRIGATE_RTSP_PASSWORD=${config.sops.placeholder.frigate_rtsp_password}
     '';
+    # llm-proxy's Claude credential. Lives in its own encrypted file; fill it
+    # with `sops ha/secrets/llm-proxy.yaml` (key: llm_anthropic_api_key).
+    secrets.llm_anthropic_api_key = { sopsFile = ./secrets/llm-proxy.yaml; };
+    # Env file consumed by services.llm-proxy.environmentFile.
+    templates."llm-proxy.env".content = ''
+      ANTHROPIC_API_KEY=${config.sops.placeholder.llm_anthropic_api_key}
+    '';
   };
 
   # ---------------------------------------------------------
@@ -223,6 +230,27 @@ in
   systemd.services.podman-bento = {
     unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
     after = [ "nats.service" ];
+  };
+
+  # ---------------------------------------------------------
+  # llm-proxy (shenas-llm-server)
+  # ---------------------------------------------------------
+  # Standalone LLM inference + metering service from the shenas monorepo,
+  # packaged + moduled in its own flake (server/llm-proxy). The systemd unit
+  # comes from llm-proxy.nixosModules.default (imported in flake.nix); here we
+  # set site policy only.
+  #
+  # Exposure: bound to localhost — the only consumer is on-host (the
+  # host-networked shenas-kiosk container reaches it at 127.0.0.1:8500), so the
+  # firewall stays closed and auth is left off (no LLM_API_KEY). The DuckDB
+  # metering/cache store persists under /var/lib/llm-proxy (StateDirectory in
+  # the module). ANTHROPIC_API_KEY — the one real secret — is injected via the
+  # sops-rendered env file below.
+  services.llm-proxy = {
+    enable = true;
+    host = "127.0.0.1";
+    port = 8500;
+    environmentFile = config.sops.templates."llm-proxy.env".path;
   };
 
   # ---------------------------------------------------------
