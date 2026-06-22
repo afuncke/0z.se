@@ -141,7 +141,7 @@ in
     "d /var/lib/home-assistant/frigate        0750 root root -"
     "d /var/lib/home-assistant/frigate/config 0750 root root -"
     "d /var/lib/home-assistant/frigate/media  0750 root root -"
-    # DuckDB sink written by the Bento container (see below).
+    # Parquet sink written by the Bento container (see below).
     "d /var/lib/home-assistant/bento          0750 root root -"
   ];
 
@@ -202,20 +202,25 @@ in
   };
 
   # ---------------------------------------------------------
-  # Bento (NATS -> DuckDB sink)
+  # Bento (NATS -> Parquet sink)
   # ---------------------------------------------------------
   # Bento (the warpstreamlabs stream processor) subscribes to the local NATS
-  # broker and persists every message into a DuckDB file for later analysis.
-  # Same pattern as HA/Frigate: pinned OCI image, host networking, config
-  # bind-mounted read-only from git, durable state on the data partition.
+  # broker and persists every message as time-partitioned Parquet files for
+  # later analysis with DuckDB. Same pattern as HA/Frigate: pinned OCI image,
+  # host networking, config bind-mounted read-only from git, durable state on
+  # the data partition.
   #
-  # The image MUST be the CGO-enabled `-cgo` variant: DuckDB links a static C
-  # library and is only compiled into builds with CGO (the plain image lacks
-  # the duckdb SQL driver). Host networking lets Bento reach NATS on
-  # 127.0.0.1:4222 (loopback, so no firewall change needed). The DuckDB file is
-  # written to /data -> /var/lib/home-assistant/bento on the data partition.
+  # Parquet encoding is pure Go, so the plain image is fine — no CGO/`-cgo`
+  # variant needed (that was only required for the old DuckDB SQL driver). Host
+  # networking lets Bento reach NATS on 127.0.0.1:4222 (loopback, so no firewall
+  # change needed). Files land under /data/nats/dt=YYYY-MM-DD/ ->
+  # /var/lib/home-assistant/bento on the data partition. Because the files are
+  # immutable and never held open, DuckDB can query them at any time without the
+  # single-writer lock contention a live .duckdb file would impose:
+  #   SELECT * FROM read_parquet('/var/lib/home-assistant/bento/nats/**/*.parquet',
+  #                              hive_partitioning=true);
   virtualisation.oci-containers.containers.bento = {
-    image = "ghcr.io/warpstreamlabs/bento:1.18.0-cgo";
+    image = "ghcr.io/warpstreamlabs/bento:1.18.0";
     cmd = [ "-c" "/bento.yaml" ];
     extraOptions = [ "--network=host" ];
     volumes = [
