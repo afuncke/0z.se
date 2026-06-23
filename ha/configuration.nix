@@ -229,7 +229,11 @@ in
   virtualisation.oci-containers.containers.bento = {
     image = "ghcr.io/warpstreamlabs/bento:1.18.0";
     cmd = [ "-c" "/bento.yaml" ];
-    extraOptions = [ "--network=host" ];
+    # Run as root (like Frigate) so Bento can create /data/nats/ under the
+    # root-owned /var/lib/home-assistant/bento. The image otherwise runs as
+    # `nobody`, which can't write that dir — `mkdir /data/nats: permission
+    # denied`. Running as root is version-independent (no hardcoded image uid).
+    extraOptions = [ "--network=host" "--user" "0:0" ];
     volumes = [
       "${./bento/config.yaml}:/bento.yaml:ro"
       "/var/lib/home-assistant/bento:/data"
