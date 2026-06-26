@@ -142,19 +142,37 @@ in
     environmentFiles = [ config.sops.templates."frigate.env".path ];
   };
 
-  # Create Frigate's config/media directories on the data partition so the
-  # first deploy doesn't fail before they exist.
-  systemd.tmpfiles.rules = [
-    "d /var/lib/home-assistant/frigate        0750 root root -"
-    "d /var/lib/home-assistant/frigate/config 0750 root root -"
-    "d /var/lib/home-assistant/frigate/media  0750 root root -"
-    # Parquet sink written by the Bento container (see below).
-    "d /var/lib/home-assistant/bento          0750 root root -"
-  ];
+  # Create Frigate's and Bento's bind-mount source dirs on the data partition
+  # before the containers start. We deliberately do NOT use systemd.tmpfiles:
+  # the HA container keeps the partition root (/var/lib/home-assistant) owned by
+  # its own (orphan) uid, mode 0700, and systemd-tmpfiles refuses to create a
+  # root-owned directory under a non-root-owned parent ("Detected unsafe path
+  # transition ... during canonicalization") as a symlink-attack guard. The
+  # dirs were therefore never created and Frigate died at startup with
+  #   statfs /var/lib/home-assistant/frigate/config: no such file or directory
+  # A plain root `mkdir` has no such guard. RequiresMountsFor pins this after
+  # the data partition is mounted, so we never write into the bare eMMC
+  # mountpoint and have the partition shadow it later.
+  systemd.services.home-assistant-data-dirs = {
+    description = "Create Frigate/Bento bind-mount dirs on the data partition";
+    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      ExecStart = "${pkgs.coreutils}/bin/mkdir -p"
+        + " /var/lib/home-assistant/frigate/config"
+        + " /var/lib/home-assistant/frigate/media"
+        + " /var/lib/home-assistant/bento";
+    };
+  };
 
-  # Don't start Frigate before its data partition is mounted (see HA above).
-  systemd.services.podman-frigate.unitConfig.RequiresMountsFor =
-    "/var/lib/home-assistant";
+  # Don't start Frigate before its data partition is mounted (see HA above) or
+  # before its bind-mount dirs exist.
+  systemd.services.podman-frigate = {
+    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    after = [ "home-assistant-data-dirs.service" ];
+    requires = [ "home-assistant-data-dirs.service" ];
+  };
 
   # ---------------------------------------------------------
   # Secrets (sops-nix)
@@ -245,7 +263,8 @@ in
   # is up (Bento retries, but this avoids noisy startup failures).
   systemd.services.podman-bento = {
     unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
-    after = [ "nats.service" ];
+    after = [ "nats.service" "home-assistant-data-dirs.service" ];
+    requires = [ "home-assistant-data-dirs.service" ];
   };
 
   # ---------------------------------------------------------
