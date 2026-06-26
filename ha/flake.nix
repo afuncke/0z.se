@@ -27,6 +27,10 @@
     # our unstable channel.
     llm-proxy.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git?dir=server/llm-proxy";
 
+    # shenas app/kiosk package. Kept separate from llm-proxy because the
+    # llm-proxy flake is intentionally scoped to the standalone LLM service.
+    shenas.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git";
+
     # Pinned nixpkgs solely for nats-server. nixos-unstable's nats-server 2.14.x
     # ships a broken JetStream API: every JS-API request is answered with the
     # core-protocol `+OK` instead of JSON, so JS (and therefore NATS-MQTT, which
@@ -37,7 +41,7 @@
     nixpkgs-nats.url = "github:NixOS/nixpkgs/nixos-25.05";
   };
 
-  outputs = { self, nixpkgs, disko, afuncke-keys, sops-nix, llm-proxy, nixpkgs-nats }: {
+  outputs = { self, nixpkgs, disko, afuncke-keys, sops-nix, llm-proxy, shenas, nixpkgs-nats }: {
     nixosConfigurations = {
       ha-thinclient = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
@@ -56,6 +60,9 @@
           # (e.g. `shenas-llm model list`); same ha-only scoping rationale.
           { environment.systemPackages =
               [ llm-proxy.packages.x86_64-linux.llm-proxy ]; }
+          # Make the shenas app/kiosk package available to configuration.nix,
+          # where the OCI container is loaded from the Nix-built kiosk image.
+          { _module.args.shenas = shenas; }
           # Override nats-server with the known-good 25.05 build (the unstable
           # 2.14.x JetStream API is broken — see the nixpkgs-nats input above).
           { nixpkgs.overlays = [

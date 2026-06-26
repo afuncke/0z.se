@@ -1,6 +1,34 @@
-{ config, pkgs, lib, afuncke-keys, ... }:
+{ config, pkgs, lib, afuncke-keys, shenas, ... }:
 
 let
+  shenasHomeAssistantSourcePlugin = pkgs.runCommand "shenas-source-homeassistant-plugin" { } ''
+    plugin_src=${shenas.outPath}/plugins/sources/homeassistant
+    mkdir -p "$out/shenas_sources"
+    cp -r "$plugin_src/shenas_sources/homeassistant" "$out/shenas_sources/homeassistant"
+
+    dist_info="$out/shenas_source_homeassistant-0.1.0.dist-info"
+    mkdir -p "$dist_info"
+    cat > "$dist_info/METADATA" <<'EOF'
+Metadata-Version: 2.1
+Name: shenas-source-homeassistant
+Version: 0.1.0
+Summary: Home Assistant landing-zone parquet connector for shenas
+Requires-Python: >=3.11
+Requires-Dist: duckdb>=1.2.0
+Requires-Dist: shenas-source-core
+EOF
+    cat > "$dist_info/WHEEL" <<'EOF'
+Wheel-Version: 1.0
+Generator: nix
+Root-Is-Purelib: true
+Tag: py3-none-any
+EOF
+    cat > "$dist_info/entry_points.txt" <<'EOF'
+[shenas.sources]
+homeassistant = shenas_sources.homeassistant.source:HomeAssistantSource
+EOF
+  '';
+
   # Sway kiosk config: black background, no decorations, native cursor hiding,
   # squeekboard for the on-screen keyboard (auto-shows on text-input focus via
   # input-method-v2), and Chromium fullscreen on HA.
@@ -190,7 +218,7 @@ in
     environmentFiles = [ config.sops.templates."frigate.env".path ];
   };
 
-  # Create Frigate's and Bento's bind-mount source dirs on the data partition
+  # Create Frigate's, Bento's, and shenas' bind-mount source dirs on the data partition
   # before the containers start. We deliberately do NOT use systemd.tmpfiles:
   # the HA container keeps the partition root (/var/lib/home-assistant) owned by
   # its own (orphan) uid, mode 0700, and systemd-tmpfiles refuses to create a
@@ -202,7 +230,7 @@ in
   # the data partition is mounted, so we never write into the bare eMMC
   # mountpoint and have the partition shadow it later.
   systemd.services.home-assistant-data-dirs = {
-    description = "Create Frigate/Bento bind-mount dirs on the data partition";
+    description = "Create Frigate/Bento/shenas bind-mount dirs on the data partition";
     unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
     serviceConfig = {
       Type = "oneshot";
@@ -210,7 +238,8 @@ in
       ExecStart = "${pkgs.coreutils}/bin/mkdir -p"
         + " /var/lib/home-assistant/frigate/config"
         + " /var/lib/home-assistant/frigate/media"
-        + " /var/lib/home-assistant/bento";
+        + " /var/lib/home-assistant/bento"
+        + " /var/lib/home-assistant/shenas";
     };
   };
 
@@ -339,14 +368,27 @@ in
   # ---------------------------------------------------------
   # shenas-kiosk (OCI container)
   # ---------------------------------------------------------
-  # Image hosted on a Tailscale tailnet registry, so this host needs tailscale
-  # up and authenticated for podman to pull. Note: unlike the other containers
-  # here, this one is pinned to `:latest` — image will float; bump deliberately
-  # with `podman pull` + `systemctl restart podman-shenas-kiosk` if you want
-  # an updated version, or pin to a digest for reproducibility.
+  # Nix-built shenas kiosk image. The app now reconciles desired plugin state
+  # at startup from SHENAS_DESIRED_PLUGINS_FILE; packages must still be baked
+  # into the image for that reconciliation to enable them.
   virtualisation.oci-containers.containers.shenas-kiosk = {
-    image = "registry.sailfish-brill.ts.net/shenas/shenas-kiosk:latest";
+    image = "shenas-kiosk-nix:latest";
+    imageFile = shenas.packages.x86_64-linux.kiosk-image;
     extraOptions = [ "--network=host" ];
+    volumes = [
+      "${./shenas/desired-plugins.json}:/etc/shenas/desired-plugins.json:ro"
+      "/var/lib/home-assistant/shenas:/data"
+    ];
+    environment = {
+      PYTHONPATH = "${shenasHomeAssistantSourcePlugin}";
+      SHENAS_DESIRED_PLUGINS_FILE = "/etc/shenas/desired-plugins.json";
+    };
+  };
+
+  systemd.services.podman-shenas-kiosk = {
+    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    after = [ "home-assistant-data-dirs.service" ];
+    requires = [ "home-assistant-data-dirs.service" ];
   };
 
   # ---------------------------------------------------------
@@ -506,7 +548,7 @@ in
   # nix-daemon rejects unsigned paths pushed by a non-trusted user. We build off
   # the host because the config now pulls a git+ssh flake input from the shenas
   # forge, which ha's root can't authenticate to. See the repo-root Makefile.
-  nix.settings.trusted-users = [ "root" "funcke" ];
+  nix.settings.trusted-users = [ "funcke" ];
 
   # This value determines the NixOS release with which the system's persistent
   # state (databases, etc.) is compatible. Set it to the release you first
