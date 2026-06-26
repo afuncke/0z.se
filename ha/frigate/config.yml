@@ -34,9 +34,9 @@ ffmpeg:
 
 record:
   enabled: true
-  retain:
-    days: 3
-    mode: all # continuous retention for 3 days
+  continuous:
+    days: 3 # continuous retention for 3 days (record.retain was renamed to
+            # record.continuous in Frigate 0.16; mode: all is implicit here)
   alerts:
     retain:
       days: 30
