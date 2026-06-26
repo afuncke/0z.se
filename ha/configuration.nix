@@ -298,6 +298,15 @@ in
     openssh.authorizedKeys.keyFiles = [ "${afuncke-keys}" ];
   };
 
+  # Temporary ("for now"): passwordless sudo for funcke so deploys and on-box
+  # debugging don't need an interactive TTY password prompt. Scoped to this user
+  # via extraRules rather than security.sudo.wheelNeedsPassword, so it doesn't
+  # blanket the whole wheel group. Revisit once debugging settles.
+  security.sudo.extraRules = [{
+    users = [ "funcke" ];
+    commands = [{ command = "ALL"; options = [ "NOPASSWD" ]; }];
+  }];
+
   # ---------------------------------------------------------
   # SSH (remote management & deploys)
   # ---------------------------------------------------------
