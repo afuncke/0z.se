@@ -109,6 +109,54 @@ in
   systemd.services.podman-homeassistant.unitConfig.RequiresMountsFor =
     "/var/lib/home-assistant";
 
+  # HACS (Home Assistant Community Store) — community integrations/cards/themes.
+  # HACS lives in /config/custom_components (runtime state, not git) and updates
+  # itself in place via the UI, so we don't try to manage it declaratively.
+  # Instead we *seed* a pinned release into custom_components/hacs once, only if
+  # it's absent, then let HACS self-update. This keeps a fresh box reproducible
+  # (it comes up with a known-good HACS) without fighting HACS's own updater.
+  #
+  # The pinned hacs.zip is fetched + hash-verified at build; stripRoot=false so
+  # the archive's files (manifest.json, __init__.py, ...) land directly as the
+  # component dir contents. Bump by changing the version + hash here.
+  #
+  # NOTE: after deploy you must RESTART Home Assistant once for it to discover
+  # the new component, then finish setup in the UI:
+  #   Settings -> Devices & Services -> Add Integration -> HACS  (GitHub device
+  #   auth). HACS requires the HA "default_config" / frontend, both already on.
+  systemd.services.hacs-seed =
+    let
+      hacs = pkgs.fetchzip {
+        url = "https://github.com/hacs/integration/releases/download/2.0.5/hacs.zip";
+        hash = "sha256-iMomioxH7Iydy+bzJDbZxt6BX31UkCvqhXrxYFQV8Gw=";
+        stripRoot = false;
+      };
+    in
+    {
+      description = "Seed HACS into Home Assistant custom_components (if absent)";
+      wantedBy = [ "multi-user.target" ];
+      before = [ "podman-homeassistant.service" ];
+      unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      # HA runs as uid 286 and keeps /config mode 0700, so the seeded files must
+      # be owned by 286 and writable (nix store is read-only) for HACS to update.
+      script = ''
+        dest=/var/lib/home-assistant/custom_components/hacs
+        if [ -e "$dest/manifest.json" ]; then
+          echo "HACS already present at $dest; leaving it (HACS self-updates)."
+          exit 0
+        fi
+        ${pkgs.coreutils}/bin/mkdir -p "$dest"
+        ${pkgs.coreutils}/bin/cp -rT ${hacs} "$dest"
+        ${pkgs.coreutils}/bin/chmod -R u+w "$dest"
+        ${pkgs.coreutils}/bin/chown -R 286:286 \
+          /var/lib/home-assistant/custom_components
+      '';
+    };
+
   # Open the firewall: 8123 = Home Assistant, 8971 = Frigate (authenticated UI).
   # Frigate's internal API (5000) and go2rtc (8554/8555) stay closed; open the
   # latter only if you want WebRTC/RTSP live view from other machines.
