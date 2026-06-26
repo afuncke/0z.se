@@ -1,6 +1,9 @@
 {
-  "frontend": "kiosk",
   "plugins": [
+    {
+      "kind": "frontend",
+      "name": "kiosk"
+    },
     {
       "kind": "source",
       "name": "homeassistant"
