@@ -283,6 +283,18 @@ in
     templates."llm-proxy.env".content = ''
       ANTHROPIC_API_KEY=${config.sops.placeholder.llm_anthropic_api_key}
     '';
+    # shenas-kiosk's device-wide DuckDB encryption key. The app resolves it from
+    # SHENAS_DB_KEY (preferred) before falling back to the OS keyring — and the
+    # container has no keyring backend, so without this the app can't open its
+    # encrypted registry DB (NoKeyringError on first PluginInstance.ensure()).
+    # Generate/rotate with `shenasctl db keygen`; here it's a random 256-bit hex
+    # key minted once and committed encrypted. Fill with `sops
+    # ha/secrets/shenas-kiosk.yaml` (key: shenas_db_key).
+    secrets.shenas_db_key = { sopsFile = ./secrets/shenas-kiosk.yaml; };
+    # Env file consumed by the shenas-kiosk container below.
+    templates."shenas-kiosk.env".content = ''
+      SHENAS_DB_KEY=${config.sops.placeholder.shenas_db_key}
+    '';
   };
 
   # ---------------------------------------------------------
@@ -375,6 +387,9 @@ in
     image = "shenas-kiosk-nix:latest";
     imageFile = shenas.packages.x86_64-linux.kiosk-image;
     extraOptions = [ "--network=host" ];
+    # SHENAS_DB_KEY (the DuckDB encryption key) comes from this sops-rendered env
+    # file; the container has no keyring, so the env var is the only way in.
+    environmentFiles = [ config.sops.templates."shenas-kiosk.env".path ];
     volumes = [
       "${./shenas/desired-plugins.json}:/etc/shenas/desired-plugins.json:ro"
       "/var/lib/home-assistant/shenas:/data"
