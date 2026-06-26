@@ -1,0 +1,13 @@
+{
+  "frontend": "kiosk",
+  "plugins": [
+    {
+      "kind": "source",
+      "name": "homeassistant"
+    }
+  ],
+  "exactKinds": [
+    "frontend",
+    "source"
+  ]
+}

@@ -41,11 +41,11 @@
       },
       "locked": {
         "dir": "server/llm-proxy",
-        "lastModified": 1782162309,
-        "narHash": "sha256-vARyJ1/0CdbGTlr9ONg2JeDJzBeUnlA0splrKwx77R4=",
+        "lastModified": 1782487005,
+        "narHash": "sha256-hjySIDwDY+hQJZm8BBV+khQRed13MdYWLEKxFnDitFc=",
         "ref": "refs/heads/main",
-        "rev": "90c9afbd897dd2f8aed79863dcd8130716d8685b",
-        "revCount": 1917,
+        "rev": "e6c7d139bea4831286351ba655b81ebdf814147e",
+        "revCount": 2099,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
@@ -57,11 +57,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1781509190,
-        "narHash": "sha256-uJZs9Di8I6ciTp6jiojj0HzlNpBkud8ax5aT/O5aJkw=",
+        "lastModified": 1782335603,
+        "narHash": "sha256-sZkQH1CkiZtdvcaLx4sGQD9Q9h+A8qB04DRpqQCN530=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d6df3513510aa548c83868fd22bfddd0a8c0a0d4",
+        "rev": "03c72920da828594fae523aaef96f33dff10b340",
         "type": "github"
       },
       "original": {
@@ -103,6 +103,22 @@
         "type": "github"
       }
     },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1779467186,
+        "narHash": "sha256-nOesoDCiXcUftqbRBMz9tt4blI5PvljMWbm3kuCA+0s=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b77b3de8775677f84492abe84635f87b0e153f0f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-25.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "pyproject-build-systems": {
       "inputs": {
         "nixpkgs": [
@@ -132,6 +148,35 @@
         "type": "github"
       }
     },
+    "pyproject-build-systems_2": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "nixpkgs"
+        ],
+        "pyproject-nix": [
+          "shenas",
+          "pyproject-nix"
+        ],
+        "uv2nix": [
+          "shenas",
+          "uv2nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1779676664,
+        "narHash": "sha256-MbXylBTkWqVm8/VYjoULtMoVRgWBN1gSHbeRKsOsPlU=",
+        "owner": "pyproject-nix",
+        "repo": "build-system-pkgs",
+        "rev": "7bff980f37fc24e09dbc986643719900c139bf12",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "build-system-pkgs",
+        "type": "github"
+      }
+    },
     "pyproject-nix": {
       "inputs": {
         "nixpkgs": [
@@ -153,6 +198,27 @@
         "type": "github"
       }
     },
+    "pyproject-nix_2": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1778901413,
+        "narHash": "sha256-GSKXTAnFqRAMlZkJrIPcQMYf+lpMr66K3i60mB9STvc=",
+        "owner": "pyproject-nix",
+        "repo": "pyproject.nix",
+        "rev": "a228447c3e179d477c1b6246ef3efa8cfe3c469a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "pyproject.nix",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "afuncke-keys": "afuncke-keys",
@@ -160,7 +226,29 @@
         "llm-proxy": "llm-proxy",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-nats": "nixpkgs-nats",
+        "shenas": "shenas",
         "sops-nix": "sops-nix"
+      }
+    },
+    "shenas": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_3",
+        "pyproject-build-systems": "pyproject-build-systems_2",
+        "pyproject-nix": "pyproject-nix_2",
+        "uv2nix": "uv2nix_2"
+      },
+      "locked": {
+        "lastModified": 1782489032,
+        "narHash": "sha256-qbOmWlJh7QxREvkBj9uxuHqmAAYNX+ykq+Zk/ks0XPU=",
+        "ref": "refs/heads/main",
+        "rev": "7c764cb7da7a2f19db369441551bcd0c38193526",
+        "revCount": 2105,
+        "type": "git",
+        "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       }
     },
     "sops-nix": {
@@ -200,6 +288,31 @@
         "owner": "pyproject-nix",
         "repo": "uv2nix",
         "rev": "920fc6dfaf9f10ec56de93b184055e1a9f380d5e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "uv2nix",
+        "type": "github"
+      }
+    },
+    "uv2nix_2": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "nixpkgs"
+        ],
+        "pyproject-nix": [
+          "shenas",
+          "pyproject-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1779411315,
+        "narHash": "sha256-IMFlxeyClau51KplhhSRGhdGTvD/knShHdybP1UOTuk=",
+        "owner": "pyproject-nix",
+        "repo": "uv2nix",
+        "rev": "fdf2a76275d7a9c27deb5d2f2ab33526ac9052ff",
         "type": "github"
       },
       "original": {
