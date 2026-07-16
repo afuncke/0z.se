@@ -464,6 +464,14 @@ in
     volumes = [
       "${./shenas/desired-plugins.json}:/etc/shenas/desired-plugins.json:ro"
       "/srv/shenas:/data"
+      # PYTHONPATH (below) points the app at the HA source plugin's Nix store
+      # path, but the container image doesn't mount the host /nix/store — so
+      # without this the path is invisible inside the container and the plugin
+      # is never discovered (reconcile logs "source/homeassistant not
+      # installed/discoverable", skipped=1). Bind-mount the store path at its
+      # own location, read-only, so PYTHONPATH resolves and the shenas_sources
+      # namespace merges the homeassistant portion in.
+      "${shenasHomeAssistantSourcePlugin}:${shenasHomeAssistantSourcePlugin}:ro"
     ];
     environment = {
       # The container image sets no HOME. DuckDB derives its extension
