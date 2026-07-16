@@ -25,11 +25,11 @@
     # our nixpkgs — its uv2nix build is pinned against its own nixpkgs (25.11),
     # so we keep that maintainer-tested combination rather than forcing it onto
     # our unstable channel.
-    llm-proxy.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git?dir=server/llm-proxy";
+    llm-proxy.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git?ref=develop&dir=server/llm-proxy";
 
     # shenas app/kiosk package. Kept separate from llm-proxy because the
     # llm-proxy flake is intentionally scoped to the standalone LLM service.
-    shenas.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git";
+    shenas.url = "git+ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git?ref=develop";
 
     # Pinned nixpkgs solely for nats-server. nixos-unstable's nats-server 2.14.x
     # ships a broken JetStream API: every JS-API request is answered with the

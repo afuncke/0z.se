@@ -12,6 +12,30 @@
         "url": "https://github.com/afuncke.keys"
       }
     },
+    "deploy-rs": {
+      "inputs": {
+        "flake-compat": "flake-compat",
+        "nixpkgs": [
+          "shenas",
+          "stakhs",
+          "nixpkgs-pit1"
+        ],
+        "utils": "utils"
+      },
+      "locked": {
+        "lastModified": 1781627888,
+        "narHash": "sha256-5yHuAh9k7rT7rtf3uRaXkiUyYvQE9oaCgzhprLm2mr8=",
+        "owner": "serokell",
+        "repo": "deploy-rs",
+        "rev": "6d3087eedff75a715b40c0e124ba15d2dd7bec28",
+        "type": "github"
+      },
+      "original": {
+        "owner": "serokell",
+        "repo": "deploy-rs",
+        "type": "github"
+      }
+    },
     "disko": {
       "inputs": {
         "nixpkgs": [
@@ -32,6 +56,22 @@
         "type": "github"
       }
     },
+    "flake-compat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1733328505,
+        "narHash": "sha256-NeCCThCEP3eCl2l/+27kNNK7QrwZB1IJCrXfrbv5oqU=",
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "rev": "ff81ac966bb2cae68946d5ed5fc4994f96d0ffec",
+        "type": "github"
+      },
+      "original": {
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "type": "github"
+      }
+    },
     "llm-proxy": {
       "inputs": {
         "nixpkgs": "nixpkgs",
@@ -41,27 +81,28 @@
       },
       "locked": {
         "dir": "server/llm-proxy",
-        "lastModified": 1782501249,
-        "narHash": "sha256-PP+VOc7Qo6DWxOH6WzXOg+QN72uucFQ0t4XjGm81SCM=",
-        "ref": "refs/heads/main",
-        "rev": "0aef5f8415878e3c150c96e8bc3038c5745f9011",
-        "revCount": 2109,
+        "lastModified": 1784234354,
+        "narHash": "sha256-3iyaeSHY2fq88tK9mFE4CziCu5fKPDo+cAeoWd0uQOI=",
+        "ref": "develop",
+        "rev": "7a937f0bbe75a3e1efbe260658fed8305444896c",
+        "revCount": 2287,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
       "original": {
         "dir": "server/llm-proxy",
+        "ref": "develop",
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1782335603,
-        "narHash": "sha256-sZkQH1CkiZtdvcaLx4sGQD9Q9h+A8qB04DRpqQCN530=",
+        "lastModified": 1782847189,
+        "narHash": "sha256-twXPFqFsrrY5r28Zh7Homgcp2gUMBgQ6WDS98Q/3xFI=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "03c72920da828594fae523aaef96f33dff10b340",
+        "rev": "b6018f87da91d19d0ab4cf979885689b469cdd41",
         "type": "github"
       },
       "original": {
@@ -83,6 +124,22 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixos-25.05",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-pit1": {
+      "locked": {
+        "lastModified": 1783224372,
+        "narHash": "sha256-8i/87eeoqiGE4yOTjwSA3Eh/ziJRQEmd/unYU+K27sk=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -185,11 +242,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782089418,
-        "narHash": "sha256-LRD1SuQWr49fGq3A+8GLXfsLE2xqIpQA440YDZwms3M=",
+        "lastModified": 1782905613,
+        "narHash": "sha256-SvXJcAemihifkTn4BGvyE5K1FJX9bl4U8DQ5pqKvD0s=",
         "owner": "pyproject-nix",
         "repo": "pyproject.nix",
-        "rev": "43f0b40edd0a74c63f66b7b48d969ae6b740d611",
+        "rev": "7af23cfe91064865ecf2e835da28b45b3c6f49fd",
         "type": "github"
       },
       "original": {
@@ -235,18 +292,20 @@
         "nixpkgs": "nixpkgs_3",
         "pyproject-build-systems": "pyproject-build-systems_2",
         "pyproject-nix": "pyproject-nix_2",
+        "stakhs": "stakhs",
         "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1782501249,
-        "narHash": "sha256-PP+VOc7Qo6DWxOH6WzXOg+QN72uucFQ0t4XjGm81SCM=",
-        "ref": "refs/heads/main",
-        "rev": "0aef5f8415878e3c150c96e8bc3038c5745f9011",
-        "revCount": 2109,
+        "lastModified": 1784234354,
+        "narHash": "sha256-3iyaeSHY2fq88tK9mFE4CziCu5fKPDo+cAeoWd0uQOI=",
+        "ref": "develop",
+        "rev": "7a937f0bbe75a3e1efbe260658fed8305444896c",
+        "revCount": 2287,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
       "original": {
+        "ref": "develop",
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       }
@@ -271,6 +330,62 @@
         "type": "github"
       }
     },
+    "stakhs": {
+      "inputs": {
+        "deploy-rs": "deploy-rs",
+        "nixpkgs": [
+          "shenas",
+          "nixpkgs"
+        ],
+        "nixpkgs-pit1": "nixpkgs-pit1"
+      },
+      "locked": {
+        "lastModified": 1783968542,
+        "narHash": "sha256-h4eNr1bI6whhN8TyLosIPAowo6hslrzZwUBMKTaCdgc=",
+        "ref": "refs/heads/main",
+        "rev": "1d8776864500f3379b3a15b88b004edcd6bd5786",
+        "revCount": 186,
+        "type": "git",
+        "url": "ssh://git@forge.sailfish-brill.ts.net/stakhs/stakhs.git"
+      },
+      "original": {
+        "type": "git",
+        "url": "ssh://git@forge.sailfish-brill.ts.net/stakhs/stakhs.git"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "utils": {
+      "inputs": {
+        "systems": "systems"
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
     "uv2nix": {
       "inputs": {
         "nixpkgs": [
@@ -283,11 +398,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1782100052,
-        "narHash": "sha256-UfyLY3Hfwb3JqxCcj0953GxTFI5dEL85EKEe6DAFiVs=",
+        "lastModified": 1783511944,
+        "narHash": "sha256-Z/Ss9rWw9QYcRK+Qqkmty7PB1pIik5XGbrtit+ad2qs=",
         "owner": "pyproject-nix",
         "repo": "uv2nix",
-        "rev": "920fc6dfaf9f10ec56de93b184055e1a9f380d5e",
+        "rev": "83995ef5e4ece3c9c704aa645bbff439e15a0ac3",
         "type": "github"
       },
       "original": {
