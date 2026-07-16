@@ -395,6 +395,15 @@ in
       "/var/lib/home-assistant/shenas:/data"
     ];
     environment = {
+      # The container image sets no HOME. DuckDB derives its extension
+      # directory from HOME, and the app's DB layer runs `LOAD httpfs` (the
+      # extension that provides mbedtls — required to WRITE the encrypted
+      # DuckDB). With HOME unset, `LOAD httpfs` fails ("Can't find the home
+      # directory at ''"), the startup plugin reconcile aborts, and NO plugins
+      # (frontend or source) ever get recorded — the kiosk shows none installed.
+      # Point HOME at the persistent /data mount so httpfs auto-installs into
+      # /data/.duckdb once and survives restarts (also gives ~/.shenas a home).
+      HOME = "/data";
       PYTHONPATH = "${shenasHomeAssistantSourcePlugin}";
       SHENAS_DESIRED_PLUGINS_FILE = "/etc/shenas/desired-plugins.json";
     };
