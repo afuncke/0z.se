@@ -41,7 +41,7 @@ sync.
    no auth). This is what makes the telemetry pipeline flow:
    `mqtt_statestream` (configured in `homeassistant/configuration.yaml`)
    publishes state changes → NATS broker → Bento → Parquet under
-   `/var/lib/home-assistant/bento/nats/dt=…/`. **Without this one step the
+   `/srv/bento/nats/dt=…/`. **Without this one step the
    Parquet sink stays empty** — `mqtt_statestream` has no broker to publish to.
    HA removed broker config from YAML years ago, so it can't live in the flake;
    confirm it connected with `journalctl -u nats | grep -i 'mqtt client'`.
@@ -71,7 +71,7 @@ Commit `flake.lock`, then rebuild as above.
 
 ### Bumping Home Assistant
 
-The HA container image is pinned in `configuration.nix` (`ghcr.io/home-assistant/home-assistant:<tag>`). Check [releases](https://github.com/home-assistant/core/releases), edit the tag, commit, push, rebuild. Podman pulls the new image on service restart; `/var/lib/home-assistant` (state, DB, UI-managed files) persists across upgrades.
+The HA container image is pinned in `configuration.nix` (`ghcr.io/home-assistant/home-assistant:<tag>`). Check [releases](https://github.com/home-assistant/core/releases), edit the tag, commit, push, rebuild. Podman pulls the new image on service restart; `/srv/home-assistant` (state, DB, UI-managed files) persists across upgrades.
 
 ### Bumping Frigate
 

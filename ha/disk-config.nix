@@ -51,12 +51,14 @@
               };
             };
             ha_data = {
-              # Give the rest of the drive to Home Assistant
-              size = "100%"; 
+              # General data partition: HA state, Frigate, Bento, shenas, and
+              # the podman image store all live under /srv (was
+              # /var/lib/home-assistant, back when HA owned the whole thing).
+              size = "100%";
               content = {
                 type = "filesystem";
                 format = "ext4";
-                mountpoint = "/var/lib/home-assistant";
+                mountpoint = "/srv";
               };
             };
           };

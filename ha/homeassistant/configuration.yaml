@@ -6,7 +6,7 @@
 # edited from the HA UI.
 #
 # The !include targets below are NOT tracked: HA writes them via the UI and
-# they live in the writable /config volume (/var/lib/home-assistant) on the
+# they live in the writable /config volume (/srv/home-assistant) on the
 # machine. Same for secrets.yaml and .storage/.
 
 # Standard HA defaults (frontend, history, discovery, energy, etc.)

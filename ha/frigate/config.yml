@@ -2,11 +2,12 @@
 #
 # Bind-mounted READ-ONLY into the container at /config/config.yml (see
 # ../configuration.nix). Edit here, commit, push, then redeploy + restart the
-# frigate container. Frigate's DB/model-cache and recordings live in the
-# writable volumes (/var/lib/home-assistant/frigate/{config,media}), not git.
+# frigate container. Frigate's DB/model-cache live in /srv/frigate/config and
+# recordings on a fixed 40G loopback fs mounted at /srv/frigate/media (see
+# configuration.nix), not git.
 #
 # Secrets: RTSP passwords use {FRIGATE_RTSP_PASSWORD}, supplied from
-# /var/lib/home-assistant/frigate/frigate.env on the box (never committed).
+# /srv/frigate/frigate.env on the box (never committed).
 
 mqtt:
   enabled: true

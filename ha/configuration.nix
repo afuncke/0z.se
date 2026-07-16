@@ -103,7 +103,7 @@ in
   # "Container" — the supported, always-latest method) via Podman.
   #
   # Config split:
-  #   - Writable, persistent /config  -> /var/lib/home-assistant on the data
+  #   - Writable, persistent /config  -> /srv on the data
   #     partition. Holds HA-generated state: .storage/, the SQLite DB, logs,
   #     secrets.yaml, and UI-managed files (automations.yaml, scripts.yaml,
   #     scenes.yaml). NOT tracked in git.
@@ -113,6 +113,29 @@ in
   #     which resolve relative to /config on the machine.
   virtualisation.podman.enable = true;
   virtualisation.oci-containers.backend = "podman";
+
+  # Image/container storage lives on the roomy /srv data partition, NOT the
+  # tiny 14G eMMC root. The pinned images alone (Frigate ~5.5G, HA ~2.4G, ...)
+  # are ~10G, which repeatedly filled `/` when the store defaulted to
+  # /var/lib/containers. graphroot on /srv gives them room; runroot stays on
+  # tmpfs. NOTE: /srv/containers is created by home-assistant-data-dirs and the
+  # podman units order after it (see below).
+  virtualisation.containers.storage.settings.storage = {
+    driver = "overlay";
+    graphroot = "/srv/containers";
+    runroot = "/run/containers/storage";
+  };
+
+  # Reap images left behind by pin bumps / `nix flake update`. Podman never
+  # prunes on its own, so old image versions accumulated on-disk until the
+  # store filled up. `--all` removes every image not backing a running
+  # container (i.e. superseded pins), not just dangling layers; the four
+  # running containers keep their current images.
+  virtualisation.podman.autoPrune = {
+    enable = true;
+    dates = "weekly";
+    flags = [ "--all" ];
+  };
   virtualisation.oci-containers.containers.homeassistant = {
     # Pinned to a specific release for reproducible deploys. Bump deliberately:
     # check https://github.com/home-assistant/core/releases, update the tag,
@@ -122,7 +145,7 @@ in
     # integrations; it also makes HA listen on host :8123 for the kiosk.
     extraOptions = [ "--network=host" "--privileged" ];
     volumes = [
-      "/var/lib/home-assistant:/config"
+      "/srv/home-assistant:/config"
       "${./homeassistant/configuration.yaml}:/config/configuration.yaml:ro"
       "/run/dbus:/run/dbus:ro"
     ];
@@ -134,8 +157,13 @@ in
   # HA's DB into the bare mountpoint on the eMMC root and have the partition
   # shadow it later. (oci-containers already sets TimeoutStartSec=0, so a slow
   # first image pull won't time out.)
-  systemd.services.podman-homeassistant.unitConfig.RequiresMountsFor =
-    "/var/lib/home-assistant";
+  systemd.services.podman-homeassistant = {
+    unitConfig.RequiresMountsFor = "/srv";
+    # HA's image is pulled into the podman store on /srv (see graphroot below),
+    # so it must also wait for /srv/containers to exist.
+    after = [ "home-assistant-data-dirs.service" ];
+    requires = [ "home-assistant-data-dirs.service" ];
+  };
 
   # HACS (Home Assistant Community Store) — community integrations/cards/themes.
   # HACS lives in /config/custom_components (runtime state, not git) and updates
@@ -164,7 +192,7 @@ in
       description = "Seed HACS into Home Assistant custom_components (if absent)";
       wantedBy = [ "multi-user.target" ];
       before = [ "podman-homeassistant.service" ];
-      unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+      unitConfig.RequiresMountsFor = "/srv/home-assistant";
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
@@ -172,7 +200,7 @@ in
       # HA runs as uid 286 and keeps /config mode 0700, so the seeded files must
       # be owned by 286 and writable (nix store is read-only) for HACS to update.
       script = ''
-        dest=/var/lib/home-assistant/custom_components/hacs
+        dest=/srv/home-assistant/custom_components/hacs
         if [ -e "$dest/manifest.json" ]; then
           echo "HACS already present at $dest; leaving it (HACS self-updates)."
           exit 0
@@ -181,7 +209,7 @@ in
         ${pkgs.coreutils}/bin/cp -rT ${hacs} "$dest"
         ${pkgs.coreutils}/bin/chmod -R u+w "$dest"
         ${pkgs.coreutils}/bin/chown -R 286:286 \
-          /var/lib/home-assistant/custom_components
+          /srv/home-assistant/custom_components
       '';
     };
 
@@ -194,10 +222,16 @@ in
   # Frigate NVR (OCI container, Intel iGPU / OpenVINO detection)
   # ---------------------------------------------------------
   # Same pattern as HA: pinned image; writable /config (frigate.db, model
-  # cache, logs) and recordings live on the data partition (the only place
-  # with real space); config.yml is bind-mounted read-only from git. Object
-  # detection runs on the Intel iGPU via OpenVINO; the iGPU also does VAAPI
-  # decode. Frigate publishes events to the local NATS MQTT broker.
+  # cache, logs) is a normal dir on /srv, but recordings live on a *fixed-size
+  # 40G loopback ext4 image* (see frigate-media-image + the srv-frigate-media
+  # mount below) so they can never crowd out HA/Bento/shenas or the podman
+  # store on the shared /srv partition. Frigate has no size-based retention —
+  # its storage maintainer deletes the oldest recordings whenever <1h of space
+  # remains on the filesystem holding /media/frigate, so capping that
+  # filesystem at 40G caps Frigate's footprint at 40G. config.yml is
+  # bind-mounted read-only from git. Object detection runs on the Intel iGPU
+  # via OpenVINO; the iGPU also does VAAPI decode. Frigate publishes events to
+  # the local NATS MQTT broker.
   virtualisation.oci-containers.containers.frigate = {
     image = "ghcr.io/blakeblackshear/frigate:0.17.1";
     extraOptions = [
@@ -207,8 +241,8 @@ in
       "--tmpfs=/tmp/cache:size=1g"   # Frigate clip cache
     ];
     volumes = [
-      "/var/lib/home-assistant/frigate/config:/config"
-      "/var/lib/home-assistant/frigate/media:/media/frigate"
+      "/srv/frigate/config:/config"
+      "/srv/frigate/media:/media/frigate"
       "${./frigate/config.yml}:/config/config.yml:ro"
       "/etc/localtime:/etc/localtime:ro"
     ];
@@ -218,35 +252,72 @@ in
     environmentFiles = [ config.sops.templates."frigate.env".path ];
   };
 
-  # Create Frigate's, Bento's, and shenas' bind-mount source dirs on the data partition
-  # before the containers start. We deliberately do NOT use systemd.tmpfiles:
-  # the HA container keeps the partition root (/var/lib/home-assistant) owned by
-  # its own (orphan) uid, mode 0700, and systemd-tmpfiles refuses to create a
-  # root-owned directory under a non-root-owned parent ("Detected unsafe path
-  # transition ... during canonicalization") as a symlink-attack guard. The
-  # dirs were therefore never created and Frigate died at startup with
-  #   statfs /var/lib/home-assistant/frigate/config: no such file or directory
-  # A plain root `mkdir` has no such guard. RequiresMountsFor pins this after
-  # the data partition is mounted, so we never write into the bare eMMC
-  # mountpoint and have the partition shadow it later.
+  # Create the per-tenant dirs on /srv (HA config, Frigate, Bento, shenas, and
+  # the podman graphroot) before the containers start. We use a plain root
+  # `mkdir` rather than systemd.tmpfiles: tmpfiles refuses to create a
+  # root-owned dir under a non-root-owned parent ("Detected unsafe path
+  # transition ... during canonicalization") as a symlink-attack guard, which
+  # bit us when HA still owned the partition root 0700. A root `mkdir` has no
+  # such guard and is robust regardless of the root's ownership.
+  # RequiresMountsFor pins this after /srv is mounted, so we never write into
+  # the bare eMMC mountpoint and have the partition shadow it later.
   systemd.services.home-assistant-data-dirs = {
-    description = "Create Frigate/Bento/shenas bind-mount dirs on the data partition";
-    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    description = "Create HA/Frigate/Bento/shenas/podman dirs on the /srv data partition";
+    unitConfig.RequiresMountsFor = "/srv";
     serviceConfig = {
       Type = "oneshot";
       RemainAfterExit = true;
       ExecStart = "${pkgs.coreutils}/bin/mkdir -p"
-        + " /var/lib/home-assistant/frigate/config"
-        + " /var/lib/home-assistant/frigate/media"
-        + " /var/lib/home-assistant/bento"
-        + " /var/lib/home-assistant/shenas";
+        + " /srv/home-assistant"
+        + " /srv/frigate/config"
+        + " /srv/frigate/media"
+        + " /srv/bento"
+        + " /srv/shenas"
+        + " /srv/containers";
     };
   };
 
-  # Don't start Frigate before its data partition is mounted (see HA above) or
-  # before its bind-mount dirs exist.
+  # The 40G loopback image that backs Frigate recordings. Created + formatted
+  # once (idempotent: skipped if the image already exists, so recordings
+  # survive rebuilds), then mounted at /srv/frigate/media by the fileSystems
+  # entry below. truncate makes it sparse, so it only consumes real space on
+  # /srv as recordings are written — up to the 40G ceiling.
+  systemd.services.frigate-media-image = {
+    description = "Create the 40G ext4 loopback image backing Frigate recordings";
+    unitConfig.RequiresMountsFor = "/srv";
+    after = [ "home-assistant-data-dirs.service" ];
+    requires = [ "home-assistant-data-dirs.service" ];
+    before = [ "srv-frigate-media.mount" ];
+    requiredBy = [ "srv-frigate-media.mount" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      set -eu
+      img=/srv/frigate/media.img
+      if [ ! -e "$img" ]; then
+        ${pkgs.coreutils}/bin/truncate -s 40G "$img"
+        ${pkgs.e2fsprogs}/bin/mkfs.ext4 -F -L frigate-media "$img"
+      fi
+    '';
+  };
+
+  # Mount the loopback image over the recordings dir. `nofail` so a missing/bad
+  # image degrades to "no recordings" rather than blocking boot; the mount pulls
+  # in frigate-media-image.service (which creates the file) via the ordering
+  # above.
+  fileSystems."/srv/frigate/media" = {
+    device = "/srv/frigate/media.img";
+    fsType = "ext4";
+    options = [ "loop" "nofail" ];
+  };
+
+  # Don't start Frigate before its data partition is mounted (see HA above),
+  # before its bind-mount dirs exist, or before the 40G recordings filesystem
+  # is mounted (RequiresMountsFor on /srv/frigate/media pulls in the loop mount).
   systemd.services.podman-frigate = {
-    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    unitConfig.RequiresMountsFor = "/srv /srv/frigate/media";
     after = [ "home-assistant-data-dirs.service" ];
     requires = [ "home-assistant-data-dirs.service" ];
   };
@@ -328,22 +399,22 @@ in
   # variant needed (that was only required for the old DuckDB SQL driver). Host
   # networking lets Bento reach NATS on 127.0.0.1:4222 (loopback, so no firewall
   # change needed). Files land under /data/nats/dt=YYYY-MM-DD/ ->
-  # /var/lib/home-assistant/bento on the data partition. Because the files are
+  # /srv/bento on the data partition. Because the files are
   # immutable and never held open, DuckDB can query them at any time without the
   # single-writer lock contention a live .duckdb file would impose:
-  #   SELECT * FROM read_parquet('/var/lib/home-assistant/bento/nats/**/*.parquet',
+  #   SELECT * FROM read_parquet('/srv/bento/nats/**/*.parquet',
   #                              hive_partitioning=true);
   virtualisation.oci-containers.containers.bento = {
     image = "ghcr.io/warpstreamlabs/bento:1.18.0";
     cmd = [ "-c" "/bento.yaml" ];
     # Run as root (like Frigate) so Bento can create /data/nats/ under the
-    # root-owned /var/lib/home-assistant/bento. The image otherwise runs as
+    # root-owned /srv/bento. The image otherwise runs as
     # `nobody`, which can't write that dir — `mkdir /data/nats: permission
     # denied`. Running as root is version-independent (no hardcoded image uid).
     extraOptions = [ "--network=host" "--user" "0:0" ];
     volumes = [
       "${./bento/config.yaml}:/bento.yaml:ro"
-      "/var/lib/home-assistant/bento:/data"
+      "/srv/bento:/data"
     ];
     environment.TZ = "Europe/Stockholm";
   };
@@ -351,7 +422,7 @@ in
   # Don't start Bento before its data partition is mounted, and not before NATS
   # is up (Bento retries, but this avoids noisy startup failures).
   systemd.services.podman-bento = {
-    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    unitConfig.RequiresMountsFor = "/srv";
     after = [ "nats.service" "home-assistant-data-dirs.service" ];
     requires = [ "home-assistant-data-dirs.service" ];
   };
@@ -392,7 +463,7 @@ in
     environmentFiles = [ config.sops.templates."shenas-kiosk.env".path ];
     volumes = [
       "${./shenas/desired-plugins.json}:/etc/shenas/desired-plugins.json:ro"
-      "/var/lib/home-assistant/shenas:/data"
+      "/srv/shenas:/data"
     ];
     environment = {
       # The container image sets no HOME. DuckDB derives its extension
@@ -410,7 +481,7 @@ in
   };
 
   systemd.services.podman-shenas-kiosk = {
-    unitConfig.RequiresMountsFor = "/var/lib/home-assistant";
+    unitConfig.RequiresMountsFor = "/srv";
     after = [ "home-assistant-data-dirs.service" ];
     requires = [ "home-assistant-data-dirs.service" ];
   };
