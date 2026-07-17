@@ -35,31 +35,55 @@ buffer:
       period: 10s
 
 # Per message: capture the originating subject, the raw payload, and an ISO
-# ingest timestamp. Then parquet_encode collapses the whole batch into a single
-# Parquet file (one message carrying the file bytes). zstd compresses well —
-# the payloads are repetitive JSON state dumps.
+# ingest timestamp. The per-output parquet_encode (below) then collapses each
+# batch into a single Parquet file. zstd compresses well — the payloads are
+# repetitive JSON state dumps.
 pipeline:
   processors:
     - mapping: |
         root.ts      = now().ts_format("2006-01-02T15:04:05.999999999Z07:00")
         root.subject = meta("nats_subject")
         root.payload = content().string()
-    - parquet_encode:
-        schema:
-          - { name: ts,      type: UTF8 }
-          - { name: subject, type: UTF8 }
-          - { name: payload, type: UTF8 }
-        default_compression: zstd
 
-# Write each encoded batch to its own immutable Parquet file under a Hive-style
-# day partition (dt=YYYY-MM-DD). Unique filenames (unix-nano + a counter) are
-# MANDATORY: the file output's all-bytes codec OVERWRITES an existing path. The
-# output creates parent directories automatically.
+# Two Parquet sinks, fanned out from the same {ts, subject, payload} batch:
 #
-# Nothing holds the files open, so DuckDB can read them at any time without a
-# lock fight — query the whole dataset (with the dt partition as a column) via:
+#   1. nats/ — EVERY subject (Frigate, Home Assistant, MQTT/JS internals). The
+#      catch-all analytics dump, queried ad-hoc with DuckDB.
+#   2. ha/   — Home Assistant only. A clean, low-volume, UTF-8-safe landing
+#      zone for the shenas-kiosk Home Assistant source. That source cannot read
+#      the catch-all stream: it mixes in binary Frigate snapshot payloads that
+#      break a string read, HA is only ~5% of rows, and the file count is
+#      enormous. The `mapping` drops every non-`homeassistant.` message from the
+#      batch before encoding.
+#
+# Each branch parquet_encodes independently and writes its batch to its own
+# immutable Parquet file under a Hive-style day partition (dt=YYYY-MM-DD).
+# Unique filenames (unix-nano + a per-branch counter) are MANDATORY: the file
+# output's all-bytes codec OVERWRITES an existing path. Outputs create parent
+# dirs automatically. Nothing holds the files open, so DuckDB can read them at
+# any time — e.g.:
 #   SELECT * FROM read_parquet('/data/nats/**/*.parquet', hive_partitioning=true);
 output:
-  file:
-    path: '/data/nats/dt=${! now().ts_format("2006-01-02") }/${! timestamp_unix_nano() }-${! count("parquet_files") }.parquet'
-    codec: all-bytes
+  broker:
+    pattern: fan_out
+    outputs:
+      - file:
+          path: '/data/nats/dt=${! now().ts_format("2006-01-02") }/${! timestamp_unix_nano() }-${! count("parquet_files_all") }.parquet'
+          codec: all-bytes
+        processors:
+          - parquet_encode: &parquet_encode
+              schema:
+                - { name: ts,      type: UTF8 }
+                - { name: subject, type: UTF8 }
+                - { name: payload, type: UTF8 }
+              default_compression: zstd
+      - file:
+          path: '/data/ha/dt=${! now().ts_format("2006-01-02") }/${! timestamp_unix_nano() }-${! count("parquet_files_ha") }.parquet'
+          codec: all-bytes
+        processors:
+          # Keep only Home Assistant messages; drop the rest from the batch.
+          # Bloblang `if` with no `else` leaves matching messages unchanged and
+          # deletes the others, so only homeassistant.* survives to encode.
+          - mapping: |
+              root = if !this.subject.has_prefix("homeassistant.") { deleted() }
+          - parquet_encode: *parquet_encode

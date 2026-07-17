@@ -272,6 +272,11 @@ in
         + " /srv/frigate/config"
         + " /srv/frigate/media"
         + " /srv/bento"
+        # HA-only mqtt_statestream capture that Bento writes here (see
+        # bento/config.yaml) and the shenas-kiosk HA source ingests. Created
+        # up-front so the kiosk's read-only bind-mount target exists even
+        # before Bento has written its first file.
+        + " /srv/bento/ha"
         + " /srv/shenas"
         + " /srv/containers";
     };
@@ -472,6 +477,11 @@ in
       # own location, read-only, so PYTHONPATH resolves and the shenas_sources
       # namespace merges the homeassistant portion in.
       "${shenasHomeAssistantSourcePlugin}:${shenasHomeAssistantSourcePlugin}:ro"
+      # HA-only mqtt_statestream capture that Bento writes to /srv/bento/ha
+      # (see bento/config.yaml). Mounted read-only as the landing zone the
+      # shenas Home Assistant source ingests from; landing_dir is set to
+      # /ha-landing by shenas-kiosk-ha-landing-config.service below.
+      "/srv/bento/ha:/ha-landing:ro"
     ];
     environment = {
       # The container image sets no HOME. DuckDB derives its extension
@@ -492,6 +502,34 @@ in
     unitConfig.RequiresMountsFor = "/srv";
     after = [ "home-assistant-data-dirs.service" ];
     requires = [ "home-assistant-data-dirs.service" ];
+  };
+
+  # The HA source's landing_dir lives in the app's DuckDB config, not in the
+  # image or an env var, so there's no declarative Nix knob for it. Seed it once
+  # the kiosk is up via the same GraphQL setConfig the UI Config tab uses.
+  # Idempotent (an upsert to the config singleton), re-run on every activation.
+  # Points at /ha-landing — the read-only mount of Bento's HA-only capture.
+  systemd.services.shenas-kiosk-ha-landing-config = {
+    description = "Set the shenas Home Assistant source landing_dir";
+    after = [ "podman-shenas-kiosk.service" ];
+    requires = [ "podman-shenas-kiosk.service" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
+    script = ''
+      set -eu
+      api=http://127.0.0.1:7280/api
+      # Wait for the app to answer (container start + DuckDB init).
+      for _ in $(seq 1 60); do
+        if ${pkgs.curl}/bin/curl -fsS -o /dev/null "$api/health"; then break; fi
+        sleep 2
+      done
+      ${pkgs.curl}/bin/curl -fsS -X POST "$api/graphql" \
+        -H 'content-type: application/json' \
+        --data '{"query":"mutation { setConfig(kind:\"source\", name:\"homeassistant\", key:\"landing_dir\", value:\"/ha-landing\") { ok } }"}'
+    '';
   };
 
   # ---------------------------------------------------------
