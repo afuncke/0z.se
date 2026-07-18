@@ -218,6 +218,12 @@ in
   # latter only if you want WebRTC/RTSP live view from other machines.
   networking.firewall.allowedTCPPorts = [ 8123 8971 ];
 
+  # shenas kiosk app (7280): reachable over the tailnet only, NOT the LAN. The
+  # app has no auth, so it stays off the public interface -- anyone who can
+  # reach the port gets full access (incl. the /api/query SQL endpoint), and
+  # the tailnet is the trust boundary. Browse at http://ha:7280 over tailscale.
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 7280 ];
+
   # ---------------------------------------------------------
   # Frigate NVR (OCI container, Intel iGPU / OpenVINO detection)
   # ---------------------------------------------------------
