@@ -81,11 +81,11 @@
       },
       "locked": {
         "dir": "server/llm-proxy",
-        "lastModified": 1784383573,
-        "narHash": "sha256-vMJe7EFskYyOsgyllzKyOdc4/aBSNyLW754viyl9wKo=",
+        "lastModified": 1784473782,
+        "narHash": "sha256-ADlGrHDefsoUhj/j1O0dtSQwmZUwecvoVGt0yGAwYZk=",
         "ref": "develop",
-        "rev": "b3a875bb42393d685a0b0d57ad5643121d1bc4e6",
-        "revCount": 2387,
+        "rev": "40a1c614f9c2fb14db8dcd07e6b281ff5a3f5ccb",
+        "revCount": 2434,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
@@ -296,11 +296,11 @@
         "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1784383573,
-        "narHash": "sha256-vMJe7EFskYyOsgyllzKyOdc4/aBSNyLW754viyl9wKo=",
+        "lastModified": 1784473782,
+        "narHash": "sha256-ADlGrHDefsoUhj/j1O0dtSQwmZUwecvoVGt0yGAwYZk=",
         "ref": "develop",
-        "rev": "b3a875bb42393d685a0b0d57ad5643121d1bc4e6",
-        "revCount": 2387,
+        "rev": "40a1c614f9c2fb14db8dcd07e6b281ff5a3f5ccb",
+        "revCount": 2434,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
