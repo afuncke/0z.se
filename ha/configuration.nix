@@ -68,6 +68,15 @@ in
   networking.domain = "0z.se";
   networking.networkmanager.enable = true;
 
+  # systemd-resolved is REQUIRED for Tailscale + NetworkManager DNS to coexist.
+  # Without it Tailscale runs in "direct" mode and overwrites /etc/resolv.conf
+  # to point only at MagicDNS (100.100.100.100) with no upstream, so *.ts.net
+  # resolves (split DNS) but every PUBLIC name returns SERVFAIL. With resolved,
+  # NetworkManager registers the per-link resolver (the DHCP router) and
+  # Tailscale programs split-DNS via resolved's D-Bus API, so public queries
+  # fall through to the router while the tailnet keeps working.
+  services.resolved.enable = true;
+
   # System timezone. Also materializes /etc/localtime, which the Frigate
   # container bind-mounts read-only (see the Frigate block below) — without a
   # timezone set, /etc/localtime doesn't exist and podman fails to start
