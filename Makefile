@@ -24,8 +24,7 @@
 # remote shell.
 switch-ha:
 	(cd ha; nix flake update shenas)
-	git commit -m "bump shenas version" ha/flake.lock
-	git push
+	git commit -m "bump shenas version" ha/flake.lock && git push || true
 	nix run nixpkgs#nixos-rebuild -- switch --refresh \
 	  --flake 'github:afuncke/0z.se?dir=ha#ha-thinclient' \
 	  --target-host ha --sudo
