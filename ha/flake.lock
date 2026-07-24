@@ -81,11 +81,11 @@
       },
       "locked": {
         "dir": "server/llm-proxy",
-        "lastModified": 1784895330,
-        "narHash": "sha256-yS4xK4Dgk6Or3Gmr2M/89WiS/oAiTTLZ6rW6capxGcc=",
+        "lastModified": 1784916933,
+        "narHash": "sha256-Bi1EdNxGSDhMEiKntnzoqQkGDzKck0HLMMzKwixx9u0=",
         "ref": "develop",
-        "rev": "d6dfa0242efad93204550fd64dceae39f2388106",
-        "revCount": 2618,
+        "rev": "a96aee486a9a6d67b06801250a655d1499ee9bf4",
+        "revCount": 2652,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
@@ -130,11 +130,11 @@
     },
     "nixpkgs-pit1": {
       "locked": {
-        "lastModified": 1783224372,
-        "narHash": "sha256-8i/87eeoqiGE4yOTjwSA3Eh/ziJRQEmd/unYU+K27sk=",
+        "lastModified": 1784356753,
+        "narHash": "sha256-12KrbMiWLcf8m7pCvAtZh1ZrgF85ZXDXvfR/fWTKy84=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d407951447dcd00442e97087bf374aad70c04cea",
+        "rev": "61b7c44c4073f0b827768aff0049561b5110ea5a",
         "type": "github"
       },
       "original": {
@@ -296,11 +296,11 @@
         "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1784895330,
-        "narHash": "sha256-yS4xK4Dgk6Or3Gmr2M/89WiS/oAiTTLZ6rW6capxGcc=",
+        "lastModified": 1784916933,
+        "narHash": "sha256-Bi1EdNxGSDhMEiKntnzoqQkGDzKck0HLMMzKwixx9u0=",
         "ref": "develop",
-        "rev": "d6dfa0242efad93204550fd64dceae39f2388106",
-        "revCount": 2618,
+        "rev": "a96aee486a9a6d67b06801250a655d1499ee9bf4",
+        "revCount": 2652,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
@@ -340,11 +340,11 @@
         "nixpkgs-pit1": "nixpkgs-pit1"
       },
       "locked": {
-        "lastModified": 1783968542,
-        "narHash": "sha256-h4eNr1bI6whhN8TyLosIPAowo6hslrzZwUBMKTaCdgc=",
+        "lastModified": 1784914975,
+        "narHash": "sha256-p5fam/Vg/HHTP2A/FvxxGJkatTBbRS29qUiw6MNzYPY=",
         "ref": "refs/heads/main",
-        "rev": "1d8776864500f3379b3a15b88b004edcd6bd5786",
-        "revCount": 186,
+        "rev": "8e0113de7f15279ed8e9915b41914076fc475c60",
+        "revCount": 426,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/stakhs/stakhs.git"
       },
