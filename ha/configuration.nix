@@ -477,7 +477,16 @@ in
   virtualisation.oci-containers.containers.shenas-kiosk = {
     image = "shenas-kiosk-nix:latest";
     imageFile = shenas.packages.x86_64-linux.kiosk-image;
-    extraOptions = [ "--network=host" ];
+    # --dns pins the container at the host's systemd-resolved stub. Because the
+    # container is --network=host, podman otherwise SNAPSHOTS /etc/resolv.conf at
+    # create time; if that instant lands mid-activation (e.g. the resolved commit
+    # restarting tailscaled), the container freezes a MagicDNS-only resolv.conf
+    # (100.100.100.100) that SERVFAILs every public name — the shenas.ai sign-in
+    # then dies with "[Errno -3] Temporary failure in name resolution". Pinning
+    # 127.0.0.53 (reachable via the shared host loopback in --network=host) makes
+    # DNS deterministic regardless of copy timing: public falls through to the
+    # router, tailnet keeps split-DNS. See services.resolved above.
+    extraOptions = [ "--network=host" "--dns=127.0.0.53" ];
     # SHENAS_DB_KEY (the DuckDB encryption key) comes from this sops-rendered env
     # file; the container has no keyring, so the env var is the only way in.
     environmentFiles = [ config.sops.templates."shenas-kiosk.env".path ];
