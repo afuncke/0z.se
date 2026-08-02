@@ -234,6 +234,38 @@
         "type": "github"
       }
     },
+    "pyproject-build-systems_3": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "stakhs",
+          "nixpkgs"
+        ],
+        "pyproject-nix": [
+          "shenas",
+          "stakhs",
+          "pyproject-nix"
+        ],
+        "uv2nix": [
+          "shenas",
+          "stakhs",
+          "uv2nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784580899,
+        "narHash": "sha256-65qjoshs2FUkt+3NzaVutCWjydUpiHElXLo+0SGuvPk=",
+        "owner": "pyproject-nix",
+        "repo": "build-system-pkgs",
+        "rev": "5c4cc964cfb1e3cab9134dabe2d86bc4858f3867",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "build-system-pkgs",
+        "type": "github"
+      }
+    },
     "pyproject-nix": {
       "inputs": {
         "nixpkgs": [
@@ -276,6 +308,28 @@
         "type": "github"
       }
     },
+    "pyproject-nix_3": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "stakhs",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784591072,
+        "narHash": "sha256-zP/WaDxrRu8GANZM61+V2LT/7ycEEdoyLWn7M6WzU7M=",
+        "owner": "pyproject-nix",
+        "repo": "pyproject.nix",
+        "rev": "e3b599ca2e7fcf93d4edf65d7f19bbf6491724f3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "pyproject.nix",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "afuncke-keys": "afuncke-keys",
@@ -293,14 +347,14 @@
         "pyproject-build-systems": "pyproject-build-systems_2",
         "pyproject-nix": "pyproject-nix_2",
         "stakhs": "stakhs",
-        "uv2nix": "uv2nix_2"
+        "uv2nix": "uv2nix_3"
       },
       "locked": {
-        "lastModified": 1785019249,
-        "narHash": "sha256-03ObGwI+bWOFweZqLOF2RdpwwVSRH56DjiKzpo0vzPk=",
+        "lastModified": 1785617991,
+        "narHash": "sha256-fTBnLxNaNHog5nmdaTCjZYGhc2pfQXLxwWkWshI6ZCY=",
         "ref": "develop",
-        "rev": "3800903763611df9272be618739579f6e257c849",
-        "revCount": 2758,
+        "rev": "5c976f01d7923779e29cf5cc8620f92fb916ade3",
+        "revCount": 3351,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
@@ -337,20 +391,23 @@
           "shenas",
           "nixpkgs"
         ],
-        "nixpkgs-pit1": "nixpkgs-pit1"
+        "nixpkgs-pit1": "nixpkgs-pit1",
+        "pyproject-build-systems": "pyproject-build-systems_3",
+        "pyproject-nix": "pyproject-nix_3",
+        "uv2nix": "uv2nix_2"
       },
       "locked": {
-        "lastModified": 1784914975,
-        "narHash": "sha256-p5fam/Vg/HHTP2A/FvxxGJkatTBbRS29qUiw6MNzYPY=",
+        "lastModified": 1785142061,
+        "narHash": "sha256-8jZksLGZkF+/7DwlwKePDqo0BFucuTwcalwgWe5G+KE=",
         "ref": "refs/heads/main",
-        "rev": "8e0113de7f15279ed8e9915b41914076fc475c60",
-        "revCount": 426,
+        "rev": "d456bc094406185c4cb91164c19b82b9b820a6e7",
+        "revCount": 567,
         "type": "git",
-        "url": "ssh://git@forge.sailfish-brill.ts.net/stakhs/stakhs.git"
+        "url": "https://forge.sailfish-brill.ts.net/stakhs/stakhs.git"
       },
       "original": {
         "type": "git",
-        "url": "ssh://git@forge.sailfish-brill.ts.net/stakhs/stakhs.git"
+        "url": "https://forge.sailfish-brill.ts.net/stakhs/stakhs.git"
       }
     },
     "systems": {
@@ -412,6 +469,33 @@
       }
     },
     "uv2nix_2": {
+      "inputs": {
+        "nixpkgs": [
+          "shenas",
+          "stakhs",
+          "nixpkgs"
+        ],
+        "pyproject-nix": [
+          "shenas",
+          "stakhs",
+          "pyproject-nix"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784582828,
+        "narHash": "sha256-uPeuFNSYO429IEiud3iJKWIpN/xrH2CANj1uYNiDxqc=",
+        "owner": "pyproject-nix",
+        "repo": "uv2nix",
+        "rev": "49dac8d206c42175b069b7c6050ba27060a21106",
+        "type": "github"
+      },
+      "original": {
+        "owner": "pyproject-nix",
+        "repo": "uv2nix",
+        "type": "github"
+      }
+    },
+    "uv2nix_3": {
       "inputs": {
         "nixpkgs": [
           "shenas",
