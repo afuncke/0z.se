@@ -350,11 +350,11 @@
         "uv2nix": "uv2nix_3"
       },
       "locked": {
-        "lastModified": 1786040930,
-        "narHash": "sha256-bS0xQVRAucZgVTPri82PZwn4/LBF9yTjGMMfl3sUdOA=",
+        "lastModified": 1786095858,
+        "narHash": "sha256-RdUUo8ncXNITtC2ILtIB+Q6fal1FIUW4ldzMUZdu7cU=",
         "ref": "develop",
-        "rev": "0cdcf62ab3cb4f3ab94a22a8a381cc65c4383720",
-        "revCount": 3682,
+        "rev": "3dab847dfbe5025ec5f1ea642b7c7abe2973acb6",
+        "revCount": 3731,
         "type": "git",
         "url": "ssh://git@forge.sailfish-brill.ts.net/shenas/shenas.git"
       },
